@@ -34,23 +34,24 @@ update_device_info(struct Interface *iface)
 	struct AdvPrefix *prefix;
 	char zero[sizeof(iface->if_addr)];
 
+	memset(&ifr, 0, sizeof(ifr));
 	strncpy(ifr.ifr_name, iface->Name, IFNAMSIZ-1);
-	ifr.ifr_name[IFNAMSIZ-1] = '\0';
 
 	if (ioctl(sock, SIOCGIFMTU, &ifr) < 0) {
 		flog(LOG_ERR, "ioctl(SIOCGIFMTU) failed for %s: %s",
 			iface->Name, strerror(errno));
-		return (-1);
+		return -1;
 	}
 
-	dlog(LOG_DEBUG, 3, "mtu for %s is %d", iface->Name, ifr.ifr_mtu);
 	iface->if_maxmtu = ifr.ifr_mtu;
+	dlog(LOG_DEBUG, 3, "mtu for %s is %d", iface->Name, ifr.ifr_mtu);
 
 	if (ioctl(sock, SIOCGIFHWADDR, &ifr) < 0) {
 		flog(LOG_ERR, "ioctl(SIOCGIFHWADDR) failed for %s: %s",
 			iface->Name, strerror(errno));
 		return (-1);
 	}
+
 	switch(ifr.ifr_hwaddr.sa_family)
         {
 	case ARPHRD_ETHER:
@@ -82,11 +83,8 @@ update_device_info(struct Interface *iface)
 		break;
 	}
 
-	dlog(LOG_DEBUG, 3, "link layer token length for %s is %d", iface->Name,
-		iface->if_hwaddr_len);
-
-	dlog(LOG_DEBUG, 3, "prefix length for %s is %d", iface->Name,
-		iface->if_prefix_len);
+	dlog(LOG_DEBUG, 3, "link layer token length for %s is %d", iface->Name, iface->if_hwaddr_len);
+	dlog(LOG_DEBUG, 3, "prefix length for %s is %d", iface->Name, iface->if_prefix_len);
 
 	if (iface->if_hwaddr_len != -1) {
 		unsigned int if_hwaddr_len_bytes = (iface->if_hwaddr_len + 7) >> 3;
@@ -116,7 +114,7 @@ update_device_info(struct Interface *iface)
  		prefix = prefix->next;
 	}
 
-	return (0);
+	return 0;
 }
 
 /*
@@ -134,7 +132,7 @@ int setup_linklocal_addr(struct Interface *iface)
 	{
 		flog(LOG_ERR, "can't open %s: %s", PATH_PROC_NET_IF_INET6,
 			strerror(errno));
-		return (-1);
+		return -1;
 	}
 
 	while (fscanf(fp, "%32s %x %02x %02x %02x %15s\n",
@@ -163,7 +161,7 @@ int setup_linklocal_addr(struct Interface *iface)
 
 	flog(LOG_ERR, "no linklocal address configured for %s", iface->Name);
 	fclose(fp);
-	return (-1);
+	return -1;
 }
 
 int setup_allrouters_membership(struct Interface *iface)
@@ -183,7 +181,7 @@ int setup_allrouters_membership(struct Interface *iface)
 		if (errno != EADDRINUSE)
 		{
 			flog(LOG_ERR, "can't join ipv6-allrouters on %s", iface->Name);
-			return (-1);
+			return -1;
 		}
 	}
 
@@ -204,7 +202,7 @@ int check_allrouters_membership(struct Interface *iface)
 	{
 		flog(LOG_ERR, "can't open %s: %s", PATH_PROC_NET_IGMP6,
 			strerror(errno));
-		return (-1);
+		return -1;
 	}
 
 	str = fgets(buffer, 300, fp);
