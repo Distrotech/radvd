@@ -11,7 +11,7 @@
 #   may request it from <reubenhwk@gmail.com>.
 #
 
-AUTOMAKE_OPTIONS = 1.2 foreign
+AUTOMAKE_OPTIONS = 1.2 foreign subdir-objects
 
 TESTS = \
 	check1 \
@@ -21,8 +21,8 @@ check_PROGRAMS = \
 	check1 \
 	check2
 
-check1_SOURCES = tuntap.c tuntap.h check1.c
-check2_SOURCES = tuntap.c tuntap.h check2.c
+check1_SOURCES = test/tuntap.c test/tuntap.h test/make_1_tunnel.c
+check2_SOURCES = test/tuntap.c test/tuntap.h test/make_100_tunnels.c
 
 DEFS = \
 	-DINET6=1 \
