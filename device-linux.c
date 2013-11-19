@@ -49,7 +49,7 @@ update_device_info(struct Interface *iface)
 	if (ioctl(sock, SIOCGIFHWADDR, &ifr) < 0) {
 		flog(LOG_ERR, "ioctl(SIOCGIFHWADDR) failed for %s: %s",
 			iface->Name, strerror(errno));
-		return (-1);
+		return -1;
 	}
 
 	switch(ifr.ifr_hwaddr.sa_family)
