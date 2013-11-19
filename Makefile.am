@@ -13,10 +13,16 @@
 
 AUTOMAKE_OPTIONS = 1.2 foreign
 
-TESTS = check1
+TESTS = \
+	check1 \
+	check2
 
-check_PROGRAMS = check1
+check_PROGRAMS = \
+	check1 \
+	check2
+
 check1_SOURCES = tuntap.c tuntap.h check1.c
+check2_SOURCES = tuntap.c tuntap.h check2.c
 
 DEFS = \
 	-DINET6=1 \
