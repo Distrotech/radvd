@@ -13,6 +13,11 @@
 
 AUTOMAKE_OPTIONS = 1.2 foreign
 
+TESTS = check1
+
+check_PROGRAMS = check1
+check1_SOURCES = tuntap.c tuntap.h check1.c
+
 DEFS = \
 	-DINET6=1 \
 	-DLOG_FACILITY=$(LOG_FACILITY) \
