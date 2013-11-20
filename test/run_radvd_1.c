@@ -1,6 +1,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
 
 #include "tuntap.h"
 
@@ -59,11 +60,19 @@ int main(int argc, char * argv[])
 		exit(1);
 	}
 	else if (pid == 0) {
-		system("./radvd -m stderr -d 5 --config /tmp/radvd.conf -n");
+		char * args[] = {
+			"./radvd",
+			"-m", "stderr",
+			"-d", "5",
+			"--config", "/tmp/radvd.conf",
+			"-n",
+			0,
+		};
+		execvp(args[0], args);
 	}
 	else {
-		sleep(1);
-		system("killall radvd");
+		sleep(3);
+		kill(pid, SIGINT);
 	}
 	return 0;
 }
