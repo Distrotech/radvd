@@ -14,18 +14,21 @@
 AUTOMAKE_OPTIONS = 1.2 foreign subdir-objects
 
 TESTS = \
-	check1 \
+	check4 \
+	check3 \
 	check2 \
-	check3
+	check1
 
 check_PROGRAMS = \
-	check1 \
+	check4 \
+	check3 \
 	check2 \
-	check3
+	check1
 
-check1_SOURCES = test/tuntap.c test/tuntap.h test/make_1_tunnel.c
-check2_SOURCES = test/tuntap.c test/tuntap.h test/make_100_tunnels.c
+check4_SOURCES = test/tuntap.c test/tuntap.h test/run_radvd_1.c
 check3_SOURCES = test/tuntap.c test/tuntap.h test/set_iface_mtu.c socket.c log.c
+check2_SOURCES = test/tuntap.c test/tuntap.h test/make_100_tunnels.c
+check1_SOURCES = test/tuntap.c test/tuntap.h test/make_1_tunnel.c
 
 DEFS = \
 	-DINET6=1 \
