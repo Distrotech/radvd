@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <sys/wait.h>
+#include <sys/types.h>
 
 #include "tuntap.h"
 
@@ -71,9 +73,21 @@ int main(int argc, char * argv[])
 		execvp(args[0], args);
 	}
 	else {
-		sleep(3);
+		int status = 1;
+		pid_t rc;
+		usleep(10000);
 		kill(pid, SIGINT);
+		rc = wait(&status);
+		if (rc != pid) {
+			perror("fork failed");
+			exit(1);
+		}
+		if (status != 0) {
+			fprintf(stderr, "radvd returned non-zero status\n");
+			exit(1);
+		}
 	}
+
 	return 0;
 }
 
