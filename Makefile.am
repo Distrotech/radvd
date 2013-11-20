@@ -13,23 +13,6 @@
 
 AUTOMAKE_OPTIONS = 1.2 foreign subdir-objects
 
-TESTS = \
-	check4 \
-	check3 \
-	check2 \
-	check1
-
-check_PROGRAMS = \
-	check4 \
-	check3 \
-	check2 \
-	check1
-
-check4_SOURCES = test/tuntap.c test/tuntap.h test/run_radvd_1.c
-check3_SOURCES = test/tuntap.c test/tuntap.h test/set_iface_mtu.c socket.c log.c
-check2_SOURCES = test/tuntap.c test/tuntap.h test/make_100_tunnels.c
-check1_SOURCES = test/tuntap.c test/tuntap.h test/make_1_tunnel.c
-
 DEFS = \
 	-DINET6=1 \
 	-DLOG_FACILITY=$(LOG_FACILITY) \
@@ -48,6 +31,23 @@ COMMON_SRC = \
 	recv.c \
 	socket.c \
 	util.c
+
+TESTS = \
+	check4 \
+	check3 \
+	check2 \
+	check1
+
+check_PROGRAMS = \
+	check4 \
+	check3 \
+	check2 \
+	check1
+
+check4_SOURCES = $(COMMON_SRC) test/tuntap.c test/tuntap.h test/run_radvd_1.c
+check3_SOURCES = $(COMMON_SRC) test/tuntap.c test/tuntap.h test/set_iface_mtu.c socket.c log.c
+check2_SOURCES = $(COMMON_SRC) test/tuntap.c test/tuntap.h test/make_100_tunnels.c
+check1_SOURCES = $(COMMON_SRC) test/tuntap.c test/tuntap.h test/make_1_tunnel.c
 
 sbin_PROGRAMS = \
 	radvd \

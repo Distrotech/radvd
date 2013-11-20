@@ -3,11 +3,11 @@
 #include <stdlib.h>
 
 #include "tuntap.h"
+int sock;
 
 int main(int argc, char * argv[])
 {
 	int tunfd;
-	int sock;
 	struct ifreq ifr;
 	int mtu;
 	char dev[IFNAMSIZ] = {""};
