@@ -10,14 +10,7 @@ int main(int argc, char * argv[])
 	char dev[IFNAMSIZ] = {""};
 
 	fd = tun_alloc(dev, IFF_TUN);
-	if (fd >= 0) {
-		if (ioctl(fd, TUNSETPERSIST, 1) < 0) {
-			perror("enabling TUNSETPERSIST");
-			exit(1);
-		}
-		printf("%d %s\n", fd, dev);
-	}
-	else {
+	if (fd < 0) {
 		perror("tun_alloc failed");
 		exit(1);
 	}

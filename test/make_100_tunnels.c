@@ -18,8 +18,6 @@ int main(int argc, char * argv[])
 		}
 	}
 
-	printf("allocated %d tunnels\n", allocated);
-
 	return 0;
 }
 
