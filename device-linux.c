@@ -35,6 +35,7 @@ update_device_info(struct Interface *iface)
 	struct ifreq	ifr;
 	struct AdvPrefix *prefix;
 	char zero[sizeof(iface->if_addr)];
+	char hwaddr[3*6];
 
 	memset(&ifr, 0, sizeof(ifr));
 	strncpy(ifr.ifr_name, iface->Name, IFNAMSIZ-1);
@@ -54,11 +55,21 @@ update_device_info(struct Interface *iface)
 		return -1;
 	}
 
+	dlog(LOG_DEBUG, 3, "hardware type for %s is %s", iface->Name, hwstr(ifr.ifr_hwaddr.sa_family));
+
 	switch(ifr.ifr_hwaddr.sa_family)
         {
 	case ARPHRD_ETHER:
 		iface->if_hwaddr_len = 48;
 		iface->if_prefix_len = 64;
+		sprintf(hwaddr, "%02x:%02x:%02x:%02x:%02x:%02x",
+			(unsigned char)ifr.ifr_hwaddr.sa_data[0],
+			(unsigned char)ifr.ifr_hwaddr.sa_data[1],
+			(unsigned char)ifr.ifr_hwaddr.sa_data[2],
+			(unsigned char)ifr.ifr_hwaddr.sa_data[3],
+			(unsigned char)ifr.ifr_hwaddr.sa_data[4],
+			(unsigned char)ifr.ifr_hwaddr.sa_data[5]);
+		dlog(LOG_DEBUG, 3, "hardware address is %s", hwaddr);
 		break;
 
 #ifdef ARPHRD_FDDI
@@ -83,7 +94,6 @@ update_device_info(struct Interface *iface)
 		break;
 	}
 
-	dlog(LOG_DEBUG, 3, "hardware type for %s is %s", iface->Name, hwstr(ifr.ifr_hwaddr.sa_family));
 	dlog(LOG_DEBUG, 3, "link layer token length for %s is %d", iface->Name, iface->if_hwaddr_len);
 	dlog(LOG_DEBUG, 3, "prefix length for %s is %d", iface->Name, iface->if_prefix_len);
 
