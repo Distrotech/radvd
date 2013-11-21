@@ -65,16 +65,6 @@ int main(int argc, char * argv[])
 	memset(&ifr, 0, sizeof(ifr));
 	strncpy(ifr.ifr_name, dev, IFNAMSIZ-1);
 
-	if (ioctl(sock, SIOCSIFFLAGS, &ifr) < 0) {
-		perror("ioctl() failed");
-		exit(1);
-	}
-
-	ifr.ifr_mtu = 1250;
-	if (ioctl(sock, SIOCSIFMTU, &ifr) < 0) {
-		perror("ioctl(SIOCSIFMTU) failed");
-		exit(1);
-	}
 #if 0
 	ifr.ifr_hwaddr.sa_family = ARPHRD_ETHER;
 	ifr.ifr_hwaddr.sa_data[0] = 0;
@@ -89,6 +79,19 @@ int main(int argc, char * argv[])
 		exit(1);
 	}
 #endif
+
+#if 1
+        if (ioctl(sock, SIOCGIFFLAGS, &ifr) < 0) {
+                perror("ioctl(SIOCGIFFLAGS) failed");
+                exit(1);
+        }
+        ifr.ifr_flags |= IFF_UP | IFF_RUNNING;
+        if (ioctl(sock, SIOCSIFFLAGS, &ifr) < 0) {
+                perror("ioctl(SIOCGIFFLAGS) failed");
+                exit(1);
+        }
+#endif
+
 	write_config(dev);
 
 	pid = fork();
@@ -110,6 +113,7 @@ int main(int argc, char * argv[])
 			0,
 		};
 		execvp(args[0], args);
+		unlink("/tmp/radvd.conf");
 	}
 	else {
 		int status = 1;
