@@ -44,10 +44,10 @@ check_PROGRAMS = \
 	check2 \
 	check1
 
-check4_SOURCES = $(COMMON_SRC) test/tuntap.c test/tuntap.h test/run_radvd_1.c
-check3_SOURCES = $(COMMON_SRC) test/tuntap.c test/tuntap.h test/set_iface_mtu.c socket.c log.c
-check2_SOURCES = $(COMMON_SRC) test/tuntap.c test/tuntap.h test/make_100_tunnels.c
-check1_SOURCES = $(COMMON_SRC) test/tuntap.c test/tuntap.h test/make_1_tunnel.c
+check4_SOURCES = test/tuntap.c test/tuntap.h test/run_radvd_1.c socket.c log.c
+check3_SOURCES = test/tuntap.c test/tuntap.h test/set_iface_mtu.c socket.c log.c
+check2_SOURCES = test/tuntap.c test/tuntap.h test/make_100_tunnels.c
+check1_SOURCES = test/tuntap.c test/tuntap.h test/make_1_tunnel.c
 
 sbin_PROGRAMS = \
 	radvd \

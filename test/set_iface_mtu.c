@@ -3,18 +3,18 @@
 #include <stdlib.h>
 
 #include "tuntap.h"
-int sock;
 
 int main(int argc, char * argv[])
 {
 	int tunfd;
+	int sock;
 	struct ifreq ifr;
 	int mtu;
 	char dev[IFNAMSIZ] = {""};
 
 	memset(&ifr, 0, sizeof(ifr));
 
-	tunfd = tun_alloc(dev, IFF_TUN);
+	tunfd = tun_alloc(dev, IFF_TAP);
 	if (tunfd < 0) {
 		perror("tun_alloc failed");
 		exit(1);
