@@ -50,7 +50,7 @@ int main(int argc, char * argv[])
 	pid_t pid;
 	struct ifreq	ifr;
 
-	fd = tun_alloc(dev, IFF_TUN);
+	fd = tun_alloc(dev, IFF_TAP);
 	if (fd < 0) {
 		perror("tun_alloc failed");
 		exit(1);
