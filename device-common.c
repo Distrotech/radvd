@@ -18,7 +18,7 @@
 #include "defaults.h"
 
 int
-check_device(struct Interface *iface)
+check_device(int sock, struct Interface *iface)
 {
 	struct ifreq	ifr;
 

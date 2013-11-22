@@ -23,8 +23,7 @@
 
 #define CONTACT_EMAIL	"Reuben Hawkins <reubenhwk@gmail.com>"
 
-extern int sock;
-
+/* TODO: remove global vars */
 extern int disableigmp6check;
 
 #define min(a,b)	(((a) < (b)) ? (a) : (b))
@@ -187,7 +186,7 @@ int yylex(void);
 
 /* radvd.c */
 int check_ip6_forwarding(void);
-void reload_config(void);
+void reload_config(int sock);
 void reset_prefix_lifetimes(void);
 
 /* timer.c */
@@ -197,11 +196,11 @@ int next_time_msec(struct Interface const * iface);
 int expired(struct Interface const * iface);
 
 /* device.c */
-int update_device_info(struct Interface *);
-int check_device(struct Interface *);
+int update_device_info(int sock, struct Interface *);
+int check_device(int sock, struct Interface *);
 int setup_linklocal_addr(struct Interface *);
-int setup_allrouters_membership(struct Interface *);
-int check_allrouters_membership(struct Interface *);
+int setup_allrouters_membership(int sock, struct Interface *);
+int check_allrouters_membership(int sock, struct Interface *);
 int get_v4addr(const char *, unsigned int *);
 int set_interface_var(const char *, const char *, const char *, uint32_t);
 int set_interface_linkmtu(const char *, uint32_t);
@@ -221,9 +220,9 @@ int check_iface(struct Interface *);
 int open_icmpv6_socket(void);
 
 /* send.c */
-int send_ra(struct Interface *iface, struct in6_addr *dest);
-int send_ra_forall(struct Interface *iface, struct in6_addr *dest);
-int really_send(
+int send_ra(int sock, struct Interface *iface, struct in6_addr *dest);
+int send_ra_forall(int sock, struct Interface *iface, struct in6_addr *dest);
+int really_send(int sock,
 		struct in6_addr const *dest,
 		unsigned int if_index,
 		struct in6_addr if_addr,
@@ -231,11 +230,11 @@ int really_send(
 		size_t len);
 
 /* process.c */
-void process(struct Interface *, unsigned char *, int,
+void process(int sock, struct Interface *, unsigned char *, int,
 	struct sockaddr_in6 *, struct in6_pktinfo *, int);
 
 /* recv.c */
-int recv_rs_ra(unsigned char *, struct sockaddr_in6 *, struct in6_pktinfo **, int *);
+int recv_rs_ra(int sock, unsigned char *, struct sockaddr_in6 *, struct in6_pktinfo **, int *);
 
 /* util.c */
 void mdelay(double);

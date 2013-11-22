@@ -167,8 +167,8 @@ ifacedef	: ifacehead '{' ifaceparams  '}' ';'
 				}
 				iface2 = iface2->next;
 			}
-
-			if (check_device(iface) < 0) {
+#warning " TODO: sock in parser? "
+			if (check_device(/* TODO: sock in parser? */ 0, iface) < 0) {
 				if (iface->IgnoreIfMissing) {
 					dlog(LOG_DEBUG, 4, "interface %s did not exist, ignoring the interface", iface->Name);
 				}
@@ -177,7 +177,8 @@ ifacedef	: ifacehead '{' ifaceparams  '}' ';'
 					ABORT;
 				}
 			}
-			if (update_device_info(iface) < 0)
+#warning " TODO: sock in parser? "
+			if (update_device_info(/* TODO: sock in parser? */ 0, iface) < 0)
 				if (!iface->IgnoreIfMissing)
 				ABORT;
 			if (check_iface(iface) < 0)
@@ -186,7 +187,8 @@ ifacedef	: ifacehead '{' ifaceparams  '}' ';'
 			if (setup_linklocal_addr(iface) < 0)
 				if (!iface->IgnoreIfMissing)
 				ABORT;
-			if (setup_allrouters_membership(iface) < 0)
+#warning " TODO: sock in parser? "
+			if (setup_allrouters_membership(/* TODO: sock in parser? */ 0, iface) < 0)
 				if (!iface->IgnoreIfMissing)
 				ABORT;
 

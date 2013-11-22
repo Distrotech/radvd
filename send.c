@@ -26,13 +26,13 @@
  *
  */
 int
-send_ra_forall(struct Interface *iface, struct in6_addr *dest)
+send_ra_forall(int sock, struct Interface *iface, struct in6_addr *dest)
 {
 	struct Clients *current;
 
 	/* If no list of clients was specified for this interface, we broadcast */
 	if (iface->ClientList == NULL)
-		return send_ra(iface, dest);
+		return send_ra(sock, iface, dest);
 
 	/* If clients are configured, send the advertisement to all of them via unicast */
 	for (current = iface->ClientList; current; current = current->next)
@@ -46,7 +46,7 @@ send_ra_forall(struct Interface *iface, struct in6_addr *dest)
 		if (dest != NULL && memcmp(dest, &current->Address, sizeof(struct in6_addr)) != 0)
 			continue;
 		dlog(LOG_DEBUG, 5, "Sending RA to %s", address_text);
-		send_ra(iface, &(current->Address));
+		send_ra(sock, iface, &(current->Address));
 
 		/* If we should only send the RA to a specific address, we are done */
 		if (dest != NULL)
@@ -111,7 +111,7 @@ static void cease_adv_pfx_msg(const char *if_name, struct in6_addr *pfx, const i
 }
 
 int
-send_ra(struct Interface *iface, struct in6_addr *dest)
+send_ra(int sock, struct Interface *iface, struct in6_addr *dest)
 {
 	uint8_t all_hosts_addr[] = {0xff,0x02,0,0,0,0,0,0,0,0,0,0,0,0,0,1};
 	struct nd_router_advert *radvert;
@@ -129,10 +129,10 @@ send_ra(struct Interface *iface, struct in6_addr *dest)
 	ssize_t err;
 
 
-	update_device_info(iface);
+	update_device_info(sock, iface);
 
 	/* First we need to check that the interface hasn't been removed or deactivated */
-	if(check_device(iface) < 0) {
+	if(check_device(sock, iface) < 0) {
 		if (iface->IgnoreIfMissing)  /* a bit more quiet warning message.. */
 			dlog(LOG_DEBUG, 4, "interface %s does not exist, ignoring the interface", iface->Name);
 		else {
@@ -151,13 +151,13 @@ send_ra(struct Interface *iface, struct in6_addr *dest)
 			 * reload_config() will kick off new timers anyway.  This avoids
 			 * timer list corruption.
 			 */
-			reload_config();
+			reload_config(sock);
 			return -1;
 		}
 	}
 
 	/* Make sure that we've joined the all-routers multicast group */
-	if (!disableigmp6check && check_allrouters_membership(iface) < 0)
+	if (!disableigmp6check && check_allrouters_membership(sock, iface) < 0)
 		flog(LOG_WARNING, "problem checking all-routers membership on %s", iface->Name);
 
 	if (!iface->AdvSendAdvert)
@@ -499,7 +499,7 @@ send_ra(struct Interface *iface, struct in6_addr *dest)
 		memcpy(buff + buff_dest, &ha_info, sizeof(ha_info));
 	}
 
-	err = really_send(dest, iface->if_index, iface->if_addr, buff, len);
+	err = really_send(sock, dest, iface->if_index, iface->if_addr, buff, len);
 
 	if (err < 0) {
 		if (!iface->IgnoreIfMissing || !(errno == EINVAL || errno == ENODEV))
@@ -511,7 +511,7 @@ send_ra(struct Interface *iface, struct in6_addr *dest)
 	return 0;
 }
 
-int really_send(
+int really_send(int sock,
 		struct in6_addr const *dest,
 		unsigned int if_index,
 		struct in6_addr if_addr,

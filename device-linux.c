@@ -30,7 +30,7 @@ static char const * hwstr(unsigned short sa_family);
  * the defined prefixes
  */
 int
-update_device_info(struct Interface *iface)
+update_device_info(int sock, struct Interface *iface)
 {
 	struct ifreq	ifr;
 	struct AdvPrefix *prefix;
@@ -177,7 +177,7 @@ int setup_linklocal_addr(struct Interface *iface)
 	return -1;
 }
 
-int setup_allrouters_membership(struct Interface *iface)
+int setup_allrouters_membership(int sock, struct Interface *iface)
 {
 	struct ipv6_mreq mreq;
 
@@ -201,7 +201,7 @@ int setup_allrouters_membership(struct Interface *iface)
 	return (0);
 }
 
-int check_allrouters_membership(struct Interface *iface)
+int check_allrouters_membership(int sock, struct Interface *iface)
 {
 	#define ALL_ROUTERS_MCAST "ff020000000000000000000000000002"
 
@@ -236,7 +236,7 @@ int check_allrouters_membership(struct Interface *iface)
 
 	if (!allrouters_ok) {
 		flog(LOG_WARNING, "resetting ipv6-allrouters membership on %s", iface->Name);
-		return setup_allrouters_membership(iface);
+		return setup_allrouters_membership(sock, iface);
 	}
 
 	return(0);

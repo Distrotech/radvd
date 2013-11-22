@@ -13,7 +13,7 @@ void write_config(char const * dev);
 void write_config(char const * dev)
 {
 
-	FILE * out = fopen("/tmp/radvd.conf", "w");
+	FILE * out = fopen("radvd.conf", "w");
 
 	if (!out) {
 		perror("fopen failed");
@@ -108,12 +108,12 @@ int main(int argc, char * argv[])
 			"-d",
 			"5",
 			"--config",
-			"/tmp/radvd.conf",
+			"radvd.conf",
 			"-n",
 			0,
 		};
 		execvp(args[0], args);
-		unlink("/tmp/radvd.conf");
+		unlink("radvd.conf");
 	}
 	else {
 		int status = 1;

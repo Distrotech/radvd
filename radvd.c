@@ -84,7 +84,6 @@ extern FILE *yyin;
 char *conf_file = NULL;
 char *pidfile = NULL;
 char *pname;
-int sock = -1;
 #ifdef HAVE_NETLINK
 int disablenetlink = 0;
 #endif
@@ -99,21 +98,22 @@ void sighup_handler(int sig);
 void sigterm_handler(int sig);
 void sigint_handler(int sig);
 void sigusr1_handler(int sig);
-void timer_handler(void *data);
+void timer_handler(int sock, void *data);
 void config_interface(void);
-void kickoff_adverts(void);
-void stop_adverts(void);
+void kickoff_adverts(int sock);
+void stop_adverts(int sock);
 void version(void);
 void usage(void);
 int drop_root_privileges(const char *);
 int readin_config(char *);
 int check_conffile_perm(const char *, const char *);
 const char *get_pidfile(void);
-void main_loop(void);
+void main_loop(int sock);
 
 int
 main(int argc, char *argv[])
 {
+int sock = -1;
 	int c, log_method;
 	char *logfile;
 	int facility;
@@ -362,10 +362,10 @@ main(int argc, char *argv[])
 	signal(SIGUSR1, sigusr1_handler);
 
 	config_interface();
-	kickoff_adverts();
-	main_loop();
+	kickoff_adverts(sock);
+	main_loop(sock);
 	flog(LOG_INFO, "sending stop adverts", pidfile);
-	stop_adverts();
+	stop_adverts(sock);
 	if (daemonize) {
 		flog(LOG_INFO, "removing %s", pidfile);
 		unlink(pidfile);
@@ -379,7 +379,7 @@ const char *get_pidfile(void) {
 	return pidfile;
 }
 
-void main_loop(void)
+void main_loop(int sock)
 {
 	struct pollfd fds[2];
 
@@ -437,9 +437,9 @@ void main_loop(void)
 				struct in6_pktinfo *pkt_info = NULL;
 				unsigned char msg[MSG_SIZE_RECV];
 
-				len = recv_rs_ra(msg, &rcv_addr, &pkt_info, &hoplimit);
+				len = recv_rs_ra(sock, msg, &rcv_addr, &pkt_info, &hoplimit);
 				if (len > 0) {
-					process(IfaceList, msg, len,
+					process(sock, IfaceList, msg, len,
 						&rcv_addr, pkt_info, hoplimit);
 				}
 			}
@@ -455,7 +455,7 @@ void main_loop(void)
 		}
 		else if ( rc == 0 ) {
 			if (next)
-				timer_handler(next);
+				timer_handler(sock, next);
 		}
 		else if ( rc == -1 ) {
 			dlog(LOG_INFO, 3, "poll returned early: %s", strerror(errno));
@@ -469,7 +469,7 @@ void main_loop(void)
 		if (sighup_received)
 		{
 			dlog(LOG_INFO, 3, "sig hup received.\n");
-			reload_config();
+			reload_config(sock);
 			sighup_received = 0;
 		}
 
@@ -484,14 +484,14 @@ void main_loop(void)
 }
 
 void
-timer_handler(void *data)
+timer_handler(int sock, void *data)
 {
 	struct Interface *iface = (struct Interface *) data;
 	double next;
 
 	dlog(LOG_DEBUG, 4, "timer_handler called for %s", iface->Name);
 
-	if (send_ra_forall(iface, NULL) != 0) {
+	if (send_ra_forall(sock, iface, NULL) != 0) {
 		return;
 	}
 
@@ -524,7 +524,7 @@ config_interface(void)
 }
 
 void
-kickoff_adverts(void)
+kickoff_adverts(int sock)
 {
 	struct Interface *iface;
 
@@ -549,7 +549,7 @@ kickoff_adverts(void)
 			continue;
 
 		/* send an initial advertisement */
-		if (send_ra_forall(iface, NULL) == 0) {
+		if (send_ra_forall(sock, iface, NULL) == 0) {
 
 			iface->init_racount++;
 
@@ -560,7 +560,7 @@ kickoff_adverts(void)
 }
 
 void
-stop_adverts(void)
+stop_adverts(int sock)
 {
 	struct Interface *iface;
 
@@ -574,13 +574,13 @@ stop_adverts(void)
 			if (iface->AdvSendAdvert) {
 				/* send a final advertisement with zero Router Lifetime */
 				iface->cease_adv = 1;
-				send_ra_forall(iface, NULL);
+				send_ra_forall(sock, iface, NULL);
 			}
 		}
 	}
 }
 
-void reload_config(void)
+void reload_config(int sock)
 {
 	struct Interface *iface;
 
@@ -652,7 +652,7 @@ void reload_config(void)
 
 	/* XXX: fails due to lack of permissions with non-root user */
 	config_interface();
-	kickoff_adverts();
+	kickoff_adverts(sock);
 
 	flog(LOG_INFO, "resuming normal operation");
 }

@@ -17,7 +17,7 @@
 #include "includes.h"
 #include "radvd.h"
 
-static void process_rs(struct Interface *, unsigned char *msg,
+static void process_rs(int sock, struct Interface *, unsigned char *msg,
 		       int len, struct sockaddr_in6 *);
 static void process_ra(struct Interface *, unsigned char *msg, int len,
 	struct sockaddr_in6 *);
@@ -25,7 +25,7 @@ static int  addr_match(struct in6_addr *a1, struct in6_addr *a2,
 	int prefixlen);
 
 void
-process(struct Interface *ifacel, unsigned char *msg, int len,
+process(int sock, struct Interface *ifacel, unsigned char *msg, int len,
 	struct sockaddr_in6 *addr, struct in6_pktinfo *pkt_info, int hoplimit)
 {
 	struct Interface *iface;
@@ -132,7 +132,7 @@ process(struct Interface *ifacel, unsigned char *msg, int len,
 	if (icmph->icmp6_type == ND_ROUTER_SOLICIT)
 	{
 		dlog(LOG_DEBUG, 4, "received RS from %s", addr_str);
-		process_rs(iface, msg, len, addr);
+		process_rs(sock, iface, msg, len, addr);
 	}
 	else if (icmph->icmp6_type == ND_ROUTER_ADVERT)
 	{
@@ -142,7 +142,7 @@ process(struct Interface *ifacel, unsigned char *msg, int len,
 }
 
 static void
-process_rs(struct Interface *iface, unsigned char *msg, int len,
+process_rs(int sock, struct Interface *iface, unsigned char *msg, int len,
 	struct sockaddr_in6 *addr)
 {
 	double delay;
@@ -193,7 +193,7 @@ process_rs(struct Interface *iface, unsigned char *msg, int len,
 	delay = MAX_RA_DELAY_TIME * rand() / (RAND_MAX +1.0);
 
 	if (iface->UnicastOnly) {
-		send_ra_forall(iface, &addr->sin6_addr);
+		send_ra_forall(sock, iface, &addr->sin6_addr);
 	}
 	else if ( timevaldiff(&tv, &iface->last_multicast) / 1000.0 < iface->MinDelayBetweenRAs ) {
 		/* last RA was sent only a few moments ago, don't send another immediately. */
@@ -202,7 +202,7 @@ process_rs(struct Interface *iface, unsigned char *msg, int len,
 	}
 	else {
 		/* no RA sent in a while, send a multicast reply */
-		send_ra_forall(iface, NULL);
+		send_ra_forall(sock, iface, NULL);
 		next = rand_between(iface->MinRtrAdvInterval, iface->MaxRtrAdvInterval);
 		iface->next_multicast = next_timeval(next);
 	}

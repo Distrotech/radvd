@@ -31,7 +31,6 @@ struct option prog_opt[] = {
 #endif
 
 char *pname;
-int sock = -1;
 
 void version(void);
 void usage(void);
@@ -41,6 +40,7 @@ void print_preferences(int);
 int
 main(int argc, char *argv[])
 {
+	int sock = -1;
 	unsigned char msg[MSG_SIZE_RECV];
 	int c, len, hoplimit;
 	int edefs = 0;
@@ -98,7 +98,7 @@ main(int argc, char *argv[])
 
 	for(;;)
 	{
-	        len = recv_rs_ra(msg, &rcv_addr, &pkt_info, &hoplimit);
+	        len = recv_rs_ra(sock, msg, &rcv_addr, &pkt_info, &hoplimit);
    	     	if (len > 0)
        	 	{
 			struct icmp6_hdr *icmph;
