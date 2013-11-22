@@ -167,38 +167,6 @@ ifacedef	: ifacehead '{' ifaceparams  '}' ';'
 				}
 				iface2 = iface2->next;
 			}
-#if 0
-
-/* TODO: It's very possible none of this code is needed.  All this is checked elsewhere (I *think*). */
-/* TODO: Maybe all that is needed is to abort if the iface doesn't exist AND ignoreifmissing is false. */
-
-#warning " TODO: sock in parser? "
-			if (check_device(/* TODO: sock in parser? */ 0, iface) < 0) {
-				if (iface->IgnoreIfMissing) {
-					dlog(LOG_DEBUG, 4, "interface %s did not exist, ignoring the interface", iface->Name);
-				}
-				else {
-					flog(LOG_ERR, "interface %s does not exist", iface->Name);
-					ABORT;
-				}
-			}
-#warning " TODO: sock in parser? "
-			if (update_device_info(/* TODO: sock in parser? */ 0, iface) < 0)
-				if (!iface->IgnoreIfMissing)
-				ABORT;
-			if (check_iface(iface) < 0)
-				if (!iface->IgnoreIfMissing)
-				ABORT;
-			if (setup_linklocal_addr(iface) < 0)
-				if (!iface->IgnoreIfMissing)
-				ABORT;
-#warning " TODO: sock in parser? "
-			if (setup_allrouters_membership(/* TODO: sock in parser? */ 0, iface) < 0)
-				if (!iface->IgnoreIfMissing)
-				ABORT;
-			dlog(LOG_DEBUG, 4, "interface definition for %s is ok", iface->Name);
-#endif
-
 			iface->next = IfaceList;
 			IfaceList = iface;
 

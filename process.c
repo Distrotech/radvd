@@ -108,8 +108,10 @@ process(int sock, struct Interface *ifacel, unsigned char *msg, int len,
 
 	if (iface == NULL)
 	{
-		dlog(LOG_DEBUG, 2, "received packet from unknown interface: %d",
-			pkt_info->ipi6_ifindex);
+		char name[IF_NAMESIZE];
+		if_indextoname(pkt_info->ipi6_ifindex, name);
+		dlog(LOG_DEBUG, 2, "received packet from unknown interface: %d %s",
+			pkt_info->ipi6_ifindex, name);
 		return;
 	}
 
