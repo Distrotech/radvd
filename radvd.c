@@ -108,6 +108,8 @@ int readin_config(char *);
 int check_conffile_perm(const char *, const char *);
 const char *get_pidfile(void);
 void main_loop(int sock, struct Interface *IfaceList);
+struct Interface * reload_config(int sock, struct Interface * IfaceList);
+void reset_prefix_lifetimes(struct Interface * IfaceList);
 
 int
 main(int argc, char *argv[])
@@ -450,7 +452,10 @@ void main_loop(int sock, struct Interface * IfaceList)
 				if (fds[1].revents & (POLLERR | POLLHUP | POLLNVAL)) {
 					flog(LOG_WARNING, "socket error on fds[1].fd");
 				} else if (fds[1].revents & POLLIN) {
-					process_netlink_msg(fds[1].fd);
+					int rc = process_netlink_msg(fds[1].fd);
+					if (rc > 0) {
+						IfaceList = reload_config(sock, IfaceList);
+					}
 				}
 			}
 #endif
@@ -471,14 +476,14 @@ void main_loop(int sock, struct Interface * IfaceList)
 		if (sighup_received)
 		{
 			dlog(LOG_INFO, 3, "sig hup received.\n");
-			reload_config(sock);
+			IfaceList = reload_config(sock, IfaceList);
 			sighup_received = 0;
 		}
 
 		if (sigusr1_received)
 		{
 			dlog(LOG_INFO, 3, "sig usr1 received.\n");
-			reset_prefix_lifetimes();
+			reset_prefix_lifetimes(IfaceList);
 			sigusr1_received = 0;
 		}
 
@@ -584,11 +589,10 @@ stop_adverts(int sock, struct Interface * IfaceList)
 
 struct Interface * reload_config(int sock, struct Interface * IfaceList)
 {
-	struct Interface *iface;
+	struct Interface *iface = IfaceList;
 
 	flog(LOG_INFO, "attempting to reread config file");
 
-	iface=IfaceList;
 	while(iface)
 	{
 		struct Interface *next_iface = iface->next;
@@ -704,7 +708,7 @@ void sigusr1_handler(int sig)
 	sigusr1_received = 1;
 }
 
-void reset_prefix_lifetimes(void)
+void reset_prefix_lifetimes(struct Interface * IfaceList)
 {
 	struct Interface *iface;
 	struct AdvPrefix *prefix;

@@ -186,8 +186,6 @@ int yylex(void);
 
 /* radvd.c */
 int check_ip6_forwarding(void);
-void reload_config(int sock);
-void reset_prefix_lifetimes(void);
 
 /* timer.c */
 struct timeval next_timeval(double next);

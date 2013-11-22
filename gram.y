@@ -169,7 +169,8 @@ ifacedef	: ifacehead '{' ifaceparams  '}' ';'
 			}
 #if 0
 
-/* It's very possible none of this code is needed.  All this is checked elsewhere (I *think*). */
+/* TODO: It's very possible none of this code is needed.  All this is checked elsewhere (I *think*). */
+/* TODO: Maybe all that is needed is to abort if the iface doesn't exist AND ignoreifmissing is false. */
 
 #warning " TODO: sock in parser? "
 			if (check_device(/* TODO: sock in parser? */ 0, iface) < 0) {

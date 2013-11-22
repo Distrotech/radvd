@@ -32,7 +32,7 @@
 #define SOL_NETLINK	270
 #endif
 
-void process_netlink_msg(int sock)
+int process_netlink_msg(int sock)
 {
 	int len;
 	char buf[4096];
@@ -44,6 +44,7 @@ void process_netlink_msg(int sock)
 	struct rtattr *rta;
 	int rta_len;
 	char ifname[IF_NAMESIZE] = {""};
+	int rc = 0;
 
 	len = recvmsg (sock, &msg, 0);
 	if (len == -1) {
@@ -53,7 +54,7 @@ void process_netlink_msg(int sock)
 	for (nh = (struct nlmsghdr *) buf; NLMSG_OK (nh, len); nh = NLMSG_NEXT (nh, len)) {
 		/* The end of multipart message. */
 		if (nh->nlmsg_type == NLMSG_DONE)
-			return;
+			return rc;
 
 		if (nh->nlmsg_type == NLMSG_ERROR) {
 			flog(LOG_ERR, "%s:%d Some type of netlink error.\n", __FILE__, __LINE__);
@@ -74,11 +75,13 @@ void process_netlink_msg(int sock)
 					else {
 						dlog(LOG_DEBUG, 3, "%s, ifindex %d, flags is *NOT* running", ifname, ifinfo->ifi_index);
 					}
-					dlog(LOG_DEBUG, 1, "TODO!!!!!!!  Do something to deal with an interface changing state!!", ifname, ifinfo->ifi_index);
+					++rc;
 				}
 			}
 		}
 	}
+
+	return rc;
 }
 
 int netlink_socket(void)

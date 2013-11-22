@@ -15,6 +15,6 @@
 
 #pragma once
 
-void process_netlink_msg(int sock);
+int process_netlink_msg(int sock);
 int netlink_socket(void);
 
