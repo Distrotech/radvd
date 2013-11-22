@@ -18,7 +18,7 @@
 #include "radvd.h"
 #include "defaults.h"
 
-extern struct Interface *IfaceList;
+static struct Interface *IfaceList = NULL;
 struct Interface *iface = NULL;
 struct AdvPrefix *prefix = NULL;
 struct AdvRoute *route = NULL;
@@ -990,3 +990,26 @@ yyerror(char *msg)
 	cleanup();
 	flog(LOG_ERR, "%s in %s, line %d: %s", msg, conf_file, num_lines, yytext);
 }
+
+extern FILE * yyin;
+
+struct IfaceList * readin_config(char *fname)
+{
+	if ((yyin = fopen(fname, "r")) == NULL)
+	{
+		flog(LOG_ERR, "can't open %s: %s", fname, strerror(errno));
+		return 0;
+	}
+
+	IfaceList = 0;
+	if (yyparse() != 0)
+	{
+		flog(LOG_ERR, "error parsing or activating the config file: %s", fname);
+		return 0;
+	}
+
+	fclose(yyin);
+	return IfaceList;
+}
+
+

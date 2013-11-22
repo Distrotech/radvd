@@ -179,7 +179,7 @@ struct HomeAgentInfo {
 
 
 /* gram.y */
-int yyparse(void);
+struct IfaceList * readin_config(char *fname);
 
 /* scanner.l */
 int yylex(void);
