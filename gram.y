@@ -993,7 +993,7 @@ yyerror(char *msg)
 
 extern FILE * yyin;
 
-struct IfaceList * readin_config(char *fname)
+struct Interface * readin_config(char *fname)
 {
 	if ((yyin = fopen(fname, "r")) == NULL)
 	{

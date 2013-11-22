@@ -103,7 +103,7 @@ void stop_adverts(int sock, struct Interface * IfaceList);
 void version(void);
 void usage(void);
 int drop_root_privileges(const char *);
-struct IfaceList * readin_config(char *);
+struct Interface * readin_config(char *);
 int check_conffile_perm(const char *, const char *);
 const char *get_pidfile(void);
 void main_loop(int sock, struct Interface *IfaceList);
@@ -272,7 +272,7 @@ int sock = -1;
 	}
 
 	/* parse config file */
-	if (IfaceList = readin_config(conf_file) < 0) {
+	if ((IfaceList = readin_config(conf_file)) == 0) {
 		flog(LOG_ERR, "Exiting, failed to read config file.\n");
 		exit(1);
 	}
@@ -650,7 +650,7 @@ struct Interface * reload_config(int sock, struct Interface * IfaceList)
 	IfaceList = NULL;
 
 	/* reread config file */
-	if (IfaceList = readin_config(conf_file) < 0) {
+	if ((IfaceList = readin_config(conf_file)) == 0) {
 		perror("readin_config failed.");
 		exit(1);
 	}
