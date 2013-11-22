@@ -44,7 +44,6 @@ void process_netlink_msg(int sock)
 	struct rtattr *rta;
 	int rta_len;
 	char ifname[IF_NAMESIZE] = {""};
-	int reloaded = 0;
 
 	len = recvmsg (sock, &msg, 0);
 	if (len == -1) {
@@ -75,10 +74,7 @@ void process_netlink_msg(int sock)
 					else {
 						dlog(LOG_DEBUG, 3, "%s, ifindex %d, flags is *NOT* running", ifname, ifinfo->ifi_index);
 					}
-					if (!reloaded) {
-						reload_config(sock);
-						reloaded = 1;
-					}
+					dlog(LOG_DEBUG, 1, "TODO!!!!!!!  Do something to deal with an interface changing state!!", ifname, ifinfo->ifi_index);
 				}
 			}
 		}

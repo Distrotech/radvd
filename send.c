@@ -146,12 +146,6 @@ send_ra(int sock, struct Interface *iface, struct in6_addr *dest)
 		if (iface->HasFailed == 1) {
 			flog(LOG_WARNING, "interface %s seems to have come back up, trying to reinitialize", iface->Name);
 			iface->HasFailed = 0;
-			/*
-			 * return -1 so timer_handler() doesn't schedule new timers,
-			 * reload_config() will kick off new timers anyway.  This avoids
-			 * timer list corruption.
-			 */
-			reload_config(sock);
 			return -1;
 		}
 	}
