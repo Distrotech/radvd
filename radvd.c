@@ -26,7 +26,6 @@
 #include <libdaemon/dfork.h>
 #include <libdaemon/dpid.h>
 
-struct Interface *IfaceList = NULL;
 
 #ifdef HAVE_GETOPT_LONG
 
@@ -79,8 +78,8 @@ char usage_str[] =
 
 #endif
 
+/* TODO: remove global vars. */
 extern FILE *yyin;
-
 char *conf_file = NULL;
 char *pidfile = NULL;
 char *pname;
@@ -99,20 +98,21 @@ void sigterm_handler(int sig);
 void sigint_handler(int sig);
 void sigusr1_handler(int sig);
 void timer_handler(int sock, void *data);
-void config_interface(void);
-void kickoff_adverts(int sock);
-void stop_adverts(int sock);
+void config_interface(struct Interface * IfaceList);
+void kickoff_adverts(int sock, struct Interface * IfaceList);
+void stop_adverts(int sock, struct Interface * IfaceList);
 void version(void);
 void usage(void);
 int drop_root_privileges(const char *);
 int readin_config(char *);
 int check_conffile_perm(const char *, const char *);
 const char *get_pidfile(void);
-void main_loop(int sock);
+void main_loop(int sock, struct Interface *IfaceList);
 
 int
 main(int argc, char *argv[])
 {
+struct Interface *IfaceList = NULL;
 int sock = -1;
 	int c, log_method;
 	char *logfile;
@@ -245,7 +245,7 @@ int sock = -1;
 	}
 
 	if (configtest) {
-		set_debuglevel(5);
+		set_debuglevel(1);
 		log_method = L_STDERR;
 	}
 
@@ -363,11 +363,11 @@ int sock = -1;
 	signal(SIGINT, sigint_handler);
 	signal(SIGUSR1, sigusr1_handler);
 
-	config_interface();
-	kickoff_adverts(sock);
-	main_loop(sock);
+	config_interface(IfaceList);
+	kickoff_adverts(sock, IfaceList);
+	main_loop(sock, IfaceList);
 	flog(LOG_INFO, "sending stop adverts", pidfile);
-	stop_adverts(sock);
+	stop_adverts(sock, IfaceList);
 	if (daemonize) {
 		flog(LOG_INFO, "removing %s", pidfile);
 		unlink(pidfile);
@@ -381,7 +381,7 @@ const char *get_pidfile(void) {
 	return pidfile;
 }
 
-void main_loop(int sock)
+void main_loop(int sock, struct Interface * IfaceList)
 {
 	struct pollfd fds[2];
 
@@ -509,7 +509,7 @@ timer_handler(int sock, void *data)
 }
 
 void
-config_interface(void)
+config_interface(struct Interface * IfaceList)
 {
 	struct Interface *iface;
 	for(iface=IfaceList; iface; iface=iface->next)
@@ -526,7 +526,7 @@ config_interface(void)
 }
 
 void
-kickoff_adverts(int sock)
+kickoff_adverts(int sock, struct Interface * IfaceList)
 {
 	struct Interface *iface;
 
@@ -562,7 +562,7 @@ kickoff_adverts(int sock)
 }
 
 void
-stop_adverts(int sock)
+stop_adverts(int sock, struct Interface * IfaceList)
 {
 	struct Interface *iface;
 
@@ -582,7 +582,7 @@ stop_adverts(int sock)
 	}
 }
 
-void reload_config(int sock)
+struct Interface * reload_config(int sock, struct Interface * IfaceList)
 {
 	struct Interface *iface;
 
@@ -653,10 +653,12 @@ void reload_config(int sock)
 	}
 
 	/* XXX: fails due to lack of permissions with non-root user */
-	config_interface();
-	kickoff_adverts(sock);
+	config_interface(IfaceList);
+	kickoff_adverts(sock, IfaceList);
 
 	flog(LOG_INFO, "resuming normal operation");
+
+	return IfaceList;
 }
 
 void
