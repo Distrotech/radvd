@@ -22,8 +22,8 @@ void write_config(char const * dev)
 
 	fprintf(out, "interface %s {\n", dev);
 	fprintf(out, "     AdvSendAdvert on;\n");
-	fprintf(out, "     MinRtrAdvInterval 20;\n");
-	fprintf(out, "     MaxRtrAdvInterval 60;\n");
+	fprintf(out, "     MinRtrAdvInterval 0;\n");
+	fprintf(out, "     MaxRtrAdvInterval 1;\n");
 	fprintf(out, "     AdvLinkMTU 1472;\n");
 	fprintf(out, "     prefix 1234:5678:9abc::/64 {\n");
 	fprintf(out, "             AdvOnLink off;\n");
@@ -116,19 +116,28 @@ int main(int argc, char * argv[])
 		unlink("radvd.conf");
 	}
 	else {
-		int status = 1;
+		int status = -1;
 		pid_t rc;
-		usleep(10000);
+		int count = 0;
+
+		while (count < 1024*24) {
+			char buffer[1500];
+			count += read(fd, buffer, sizeof(buffer));
+			printf("count: %d\n", count);
+		}
 		kill(pid, SIGINT);
-		rc = wait(&status);
-		if (rc != pid) {
-			perror("fork failed");
-			exit(1);
-		}
-		if (status != 0) {
-			fprintf(stderr, "radvd returned non-zero status\n");
-			exit(1);
-		}
+		rc = wait (&status);
+		if (rc != pid)
+			{
+				perror ("wait failed");
+				exit (1);
+			}
+
+		if (status != 0)
+			{
+				fprintf (stderr, "radvd returned non-zero status\n");
+				exit (1);
+			}
 	}
 
 	return 0;
