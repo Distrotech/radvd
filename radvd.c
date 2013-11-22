@@ -245,6 +245,7 @@ int sock = -1;
 	}
 
 	if (configtest) {
+		set_debuglevel(5);
 		log_method = L_STDERR;
 	}
 
@@ -255,13 +256,6 @@ int sock = -1;
 
 	if (!configtest) {
 		flog(LOG_INFO, "version %s started", VERSION);
-	}
-
-	/* get a raw socket for sending and receiving ICMPv6 messages */
-	sock = open_icmpv6_socket();
-	if (sock < 0) {
-		perror("open_icmpv6_socket");
-		exit(1);
 	}
 
 	/* check that 'other' cannot write the file
@@ -276,21 +270,29 @@ int sock = -1;
 			flog(LOG_WARNING, "Insecure file permissions, but continuing anyway");
 	}
 
-	/* if we know how to do it, check whether forwarding is enabled */
-	if (check_ip6_forwarding()) {
-		flog(LOG_WARNING, "IPv6 forwarding seems to be disabled, but continuing anyway.");
-	}
-
 	/* parse config file */
 	if (readin_config(conf_file) < 0) {
 		flog(LOG_ERR, "Exiting, failed to read config file.\n");
 		exit(1);
 	}
 
+	dlog(LOG_DEBUG, 1, "config file syntax ok.");
 	if (configtest) {
-		fprintf(stderr, "Syntax OK\n");
 		exit(0);
 	}
+
+	/* get a raw socket for sending and receiving ICMPv6 messages */
+	sock = open_icmpv6_socket();
+	if (sock < 0) {
+		perror("open_icmpv6_socket");
+		exit(1);
+	}
+
+	/* if we know how to do it, check whether forwarding is enabled */
+	if (check_ip6_forwarding()) {
+		flog(LOG_WARNING, "IPv6 forwarding seems to be disabled, but continuing anyway.");
+	}
+
 
 #ifdef USE_PRIVSEP
 	dlog(LOG_DEBUG, 3, "Initializing privsep");
