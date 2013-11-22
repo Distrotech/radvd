@@ -132,6 +132,8 @@ update_device_info(struct Interface *iface)
  * this function extracts the link local address and interface index
  * from PATH_PROC_NET_IF_INET6.  Note: 'sock' unused in Linux.
  */
+/* TODO: Why do we read this info from a file?  Would it be better
+ * to get this from getifaddrs and ioctl? */
 int setup_linklocal_addr(struct Interface *iface)
 {
 	FILE *fp;
