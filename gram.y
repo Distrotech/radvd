@@ -167,6 +167,10 @@ ifacedef	: ifacehead '{' ifaceparams  '}' ';'
 				}
 				iface2 = iface2->next;
 			}
+#if 0
+
+/* It's very possible none of this code is needed.  All this is checked elsewhere (I *think*). */
+
 #warning " TODO: sock in parser? "
 			if (check_device(/* TODO: sock in parser? */ 0, iface) < 0) {
 				if (iface->IgnoreIfMissing) {
@@ -191,8 +195,8 @@ ifacedef	: ifacehead '{' ifaceparams  '}' ';'
 			if (setup_allrouters_membership(/* TODO: sock in parser? */ 0, iface) < 0)
 				if (!iface->IgnoreIfMissing)
 				ABORT;
-
 			dlog(LOG_DEBUG, 4, "interface definition for %s is ok", iface->Name);
+#endif
 
 			iface->next = IfaceList;
 			IfaceList = iface;
