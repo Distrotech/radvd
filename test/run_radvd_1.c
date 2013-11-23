@@ -22,8 +22,8 @@ void write_config(char const * dev, char const * mode)
 
 	fprintf(out, "interface %s {\n", dev);
 	fprintf(out, "     AdvSendAdvert on;\n");
-	fprintf(out, "     MinRtrAdvInterval 0;\n");
-	fprintf(out, "     MaxRtrAdvInterval 1;\n");
+	fprintf(out, "     MinRtrAdvInterval 1;\n");
+	fprintf(out, "     MaxRtrAdvInterval 3;\n");
 	fprintf(out, "     AdvLinkMTU 1472;\n");
 	fprintf(out, "     prefix 1234:5678:9abc::/64 {\n");
 	fprintf(out, "             AdvOnLink off;\n");
@@ -47,7 +47,7 @@ int main(int argc, char * argv[])
 	int sock;
 	pid_t pid;
 	struct ifreq	ifr;
-	int tunnels = 4;
+	int tunnels = 40;
 
 	sock = open_icmpv6_socket();
 	if (sock < 0) {
@@ -66,11 +66,12 @@ int main(int argc, char * argv[])
 			perror("tun_alloc failed");
 			exit(1);
 		}
-
+#if 0
 		if(ioctl(fd, TUNSETPERSIST, 1) < 0){
 			perror("enabling TUNSETPERSIST");
 			exit(1);
 		}
+#endif
 		write_config(dev, "a");
 
 		memset(&ifr, 0, sizeof(ifr));
@@ -117,7 +118,7 @@ int main(int argc, char * argv[])
 			"-m",
 			"stderr",
 			"-d",
-			"5",
+			"3",
 			"--config",
 			"radvd.conf",
 			"-n",
