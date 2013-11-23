@@ -33,24 +33,26 @@ COMMON_SRC = \
 	util.c
 
 TESTS = \
-	check5 \
 	check4 \
 	check3 \
 	check2 \
 	check1
 
 check_PROGRAMS = \
-	check5 \
 	check4 \
 	check3 \
 	check2 \
 	check1
 
-check5_SOURCES = test/tuntap.c test/tuntap.h test/run_radvd_2.c socket.c log.c
-check4_SOURCES = test/tuntap.c test/tuntap.h test/run_radvd_1.c socket.c log.c
-check3_SOURCES = test/tuntap.c test/tuntap.h test/set_iface_mtu.c socket.c log.c
-check2_SOURCES = test/tuntap.c test/tuntap.h test/make_100_tunnels.c socket.c log.c
-check1_SOURCES = test/tuntap.c test/tuntap.h test/make_1_tunnel.c socket.c log.c
+check4_SOURCES = tuntap.c tuntap.h test/run_radvd_1.c socket.c log.c
+check3_SOURCES = tuntap.c tuntap.h test/set_iface_mtu.c socket.c log.c
+check2_SOURCES = tuntap.c tuntap.h test/make_100_tunnels.c socket.c log.c
+check1_SOURCES = tuntap.c tuntap.h test/make_1_tunnel.c socket.c log.c
+
+noinst_PROGRAMS = \
+	radvd_test_hub
+
+radvd_test_hub_SOURCES = tuntap.c tuntap.h radvd_test_hub.c socket.c log.c
 
 sbin_PROGRAMS = \
 	radvd \
