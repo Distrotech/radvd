@@ -33,17 +33,20 @@ COMMON_SRC = \
 	util.c
 
 TESTS = \
+	check5 \
 	check4 \
 	check3 \
 	check2 \
 	check1
 
 check_PROGRAMS = \
+	check5 \
 	check4 \
 	check3 \
 	check2 \
 	check1
 
+check5_SOURCES = test/tuntap.c test/tuntap.h test/run_radvd_2.c socket.c log.c
 check4_SOURCES = test/tuntap.c test/tuntap.h test/run_radvd_1.c socket.c log.c
 check3_SOURCES = test/tuntap.c test/tuntap.h test/set_iface_mtu.c socket.c log.c
 check2_SOURCES = test/tuntap.c test/tuntap.h test/make_100_tunnels.c socket.c log.c

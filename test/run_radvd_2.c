@@ -66,11 +66,13 @@ int main(int argc, char * argv[])
 			perror("tun_alloc failed");
 			exit(1);
 		}
-
+#if 0
 		if(ioctl(fd, TUNSETPERSIST, 1) < 0){
 			perror("enabling TUNSETPERSIST");
 			exit(1);
 		}
+#endif
+
 		write_config(dev, "a");
 
 		memset(&ifr, 0, sizeof(ifr));
@@ -105,46 +107,12 @@ int main(int argc, char * argv[])
 
 	}
 
-	pid = fork();
-
-	if (pid < 0) {
-		perror("fork failed");
-		exit(1);
-	}
-	else if (pid == 0) {
-		char * args[] = {
-			"./radvd",
-			"-m",
-			"stderr",
-			"-d",
-			"5",
-			"--config",
-			"radvd.conf",
-			"-n",
-			0,
-		};
-		execvp(args[0], args);
-	}
-	else {
+	while (0) {
 		int status = -1;
 		pid_t rc;
 		int count = 0;
 
-		sleep(1);
-		kill(pid, SIGTERM);
-
-		rc = wait (&status);
-		if (rc != pid)
-			{
-				perror ("wait failed");
-				exit (1);
-			}
-
-		if (status != 0)
-			{
-				fprintf (stderr, "radvd returned non-zero status %d\n", status);
-				exit (1);
-			}
+		usleep(10000);
 	}
 
 	return 0;

@@ -376,6 +376,7 @@ int sock = -1;
 		unlink(pidfile);
 	}
 
+	flog(LOG_INFO, "returning from radvd main");
 	return 0;
 }
 
@@ -581,6 +582,7 @@ stop_adverts(int sock, struct Interface * IfaceList)
 			/* TODO: AdvSendAdvert is being checked in send_ra now so it can be removed here. */
 			if (iface->AdvSendAdvert) {
 				/* send a final advertisement with zero Router Lifetime */
+				dlog(LOG_DEBUG, 4, "stopping all adverts on %s.", iface->Name);
 				iface->cease_adv = 1;
 				send_ra_forall(sock, iface, NULL);
 			}
