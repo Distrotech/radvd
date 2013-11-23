@@ -5,6 +5,7 @@
 #include <sys/wait.h>
 #include <sys/types.h>
 #include <net/if_arp.h>
+#include <sys/select.h>
 
 #include "tuntap.h"
 
@@ -23,18 +24,14 @@ void write_config(char const * dev, char const * mode)
 	fprintf(out, "interface %s {\n", dev);
 	fprintf(out, "     AdvSendAdvert on;\n");
 	fprintf(out, "     MinRtrAdvInterval 10;\n");
-	fprintf(out, "     MaxRtrAdvInterval 60;\n");
+	fprintf(out, "     MaxRtrAdvInterval 600;\n");
 	fprintf(out, "     AdvLinkMTU 1472;\n");
 	fprintf(out, "     prefix 1234:5678:9abc::/64 {\n");
 	fprintf(out, "             AdvOnLink off;\n");
 	fprintf(out, "             AdvAutonomous on;\n");
 	fprintf(out, "             AdvRouterAddr on; \n");
-	fprintf(out, "             AdvPreferredLifetime 90;\n");
-	fprintf(out, "             AdvValidLifetime 120;\n");
-	fprintf(out, "     };\n");
-	fprintf(out, "     RDNSS 2001:470:20::2\n");
-	fprintf(out, "     {\n");
-	fprintf(out, "             AdvRDNSSLifetime 60;\n");
+	fprintf(out, "             AdvPreferredLifetime 900;\n");
+	fprintf(out, "             AdvValidLifetime 1200;\n");
 	fprintf(out, "     };\n");
 	fprintf(out, "};\n");
 
@@ -44,10 +41,13 @@ void write_config(char const * dev, char const * mode)
 
 int main(int argc, char * argv[])
 {
+#define IFACE_COUNT 5
 	int sock;
 	struct ifreq	ifr;
-	int fds[8];
-	int tunnels = 8;
+	int fds[IFACE_COUNT];
+	int tunnels = IFACE_COUNT;
+	fd_set readset;
+	FD_ZERO(&readset);
 
 	sock = open_icmpv6_socket();
 	if (sock < 0) {
@@ -65,6 +65,7 @@ int main(int argc, char * argv[])
 			perror("tun_alloc failed");
 			exit(1);
 		}
+		FD_SET(fds[tunnels], &readset);
 #if 0
 		if(ioctl(fd, TUNSETPERSIST, 1) < 0){
 			perror("enabling TUNSETPERSIST");
@@ -107,8 +108,21 @@ int main(int argc, char * argv[])
 		printf("interface %s ready...\n", dev);
 	}
 
+	printf("radvd.conf written\n");
+
 	while (1) {
-		usleep(10000);
+		int rc = select(sizeof(fds)/sizeof(fds[0]), &readset, 0, 0, 0);
+		if (rc > 0) {
+			int i = 0;
+			for (; i < sizeof(fds)/sizeof(fds[0]); ++i) {
+				if (FD_ISSET(fds[i], &readset)) {
+					char buffer[1500];
+					int count = read(fds[i], buffer, sizeof(buffer));
+					printf("read %d bytes from fds[%d]\n", count, i);
+				}
+			}
+		}
+		
 	}
 
 	return 0;

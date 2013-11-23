@@ -429,7 +429,7 @@ void main_loop(int sock, struct Interface * IfaceList)
 			}
 		}
 
-		dlog(LOG_DEBUG, 5, "polling for %g seconds.", timeout/1000.0);
+		dlog(LOG_DEBUG, 5, "polling for %g seconds. Next iface is %s.", timeout/1000.0, next->Name);
 
 		rc = poll(fds, sizeof(fds)/sizeof(fds[0]), timeout);
 
