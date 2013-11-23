@@ -22,8 +22,8 @@ void write_config(char const * dev, char const * mode)
 
 	fprintf(out, "interface %s {\n", dev);
 	fprintf(out, "     AdvSendAdvert on;\n");
-	fprintf(out, "     MinRtrAdvInterval 0;\n");
-	fprintf(out, "     MaxRtrAdvInterval 1;\n");
+	fprintf(out, "     MinRtrAdvInterval 10;\n");
+	fprintf(out, "     MaxRtrAdvInterval 60;\n");
 	fprintf(out, "     AdvLinkMTU 1472;\n");
 	fprintf(out, "     prefix 1234:5678:9abc::/64 {\n");
 	fprintf(out, "             AdvOnLink off;\n");
@@ -47,7 +47,7 @@ int main(int argc, char * argv[])
 	int sock;
 	pid_t pid;
 	struct ifreq	ifr;
-	int tunnels = 4;
+	int tunnels = 8;
 
 	sock = open_icmpv6_socket();
 	if (sock < 0) {
