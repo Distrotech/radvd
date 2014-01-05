@@ -275,8 +275,8 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
+	dlog(LOG_DEBUG, 1, "config file syntax ok.");
 	if (configtest) {
-		fprintf(stderr, "Syntax OK\n");
 		exit(0);
 	}
 #ifdef USE_PRIVSEP
