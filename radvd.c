@@ -231,6 +231,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (configtest) {
+		set_debuglevel(1);
 		log_method = L_STDERR;
 	}
 
