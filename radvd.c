@@ -354,6 +354,7 @@ int main(int argc, char *argv[])
 		unlink(pidfile);
 	}
 
+	flog(LOG_INFO, "returning from radvd main");
 	return 0;
 }
 
