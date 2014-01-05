@@ -279,21 +279,6 @@ int main(int argc, char *argv[])
 	if (configtest) {
 		exit(0);
 	}
-#ifdef USE_PRIVSEP
-	dlog(LOG_DEBUG, 3, "Initializing privsep");
-	if (privsep_init() < 0) {
-		perror("Failed to initialize privsep.");
-		exit(1);
-	}
-#endif
-
-	/* drop root privileges if requested. */
-	if (username) {
-		if (drop_root_privileges(username) < 0) {
-			perror("drop_root_privileges");
-			exit(1);
-		}
-	}
 
 	/*
 	 * okay, config file is read in, socket and stuff is setup, so
@@ -332,6 +317,20 @@ int main(int argc, char *argv[])
 			exit(1);
 		}
 		daemon_retval_send(0);
+	}
+
+	dlog(LOG_DEBUG, 3, "Initializing privsep");
+	if (privsep_init() < 0) {
+		flog(LOG_INFO, "Failed to initialize privsep.");
+		exit(1);
+	}
+
+	if (username) {
+		if (drop_root_privileges(username) < 0) {
+			perror("drop_root_privileges");
+			flog(LOG_ERR, "unable to drop root privileges");
+			exit(1);
+		}
 	}
 
 	signal(SIGHUP, sighup_handler);
