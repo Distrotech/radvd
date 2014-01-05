@@ -105,6 +105,7 @@ void stop_adverts(void);
 void version(void);
 void usage(void);
 int drop_root_privileges(const char *);
+struct Interface *readin_config(char *);
 int check_conffile_perm(const char *, const char *);
 const char *get_pidfile(void);
 void main_loop(void);
