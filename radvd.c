@@ -110,6 +110,7 @@ int check_conffile_perm(const char *, const char *);
 const char *get_pidfile(void);
 void main_loop(void);
 void check_ifaces(int sock, struct Interface *IfaceList);
+struct Interface *reload_config(int sock, struct Interface *IfaceList);
 
 int main(int argc, char *argv[])
 {
