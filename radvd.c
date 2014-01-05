@@ -245,13 +245,6 @@ int main(int argc, char *argv[])
 		flog(LOG_INFO, "version %s started", VERSION);
 	}
 
-	/* get a raw socket for sending and receiving ICMPv6 messages */
-	sock = open_icmpv6_socket();
-	if (sock < 0) {
-		perror("open_icmpv6_socket");
-		exit(1);
-	}
-
 	/* check that 'other' cannot write the file
 	 * for non-root, also that self/own group can't either
 	 */
@@ -277,6 +270,13 @@ int main(int argc, char *argv[])
 	dlog(LOG_DEBUG, 1, "config file syntax ok.");
 	if (configtest) {
 		exit(0);
+	}
+
+	/* get a raw socket for sending and receiving ICMPv6 messages */
+	sock = open_icmpv6_socket();
+	if (sock < 0) {
+		perror("open_icmpv6_socket");
+		exit(1);
 	}
 
 	/*
