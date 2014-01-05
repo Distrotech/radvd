@@ -448,7 +448,10 @@ void main_loop(void)
 				if (fds[1].revents & (POLLERR | POLLHUP | POLLNVAL)) {
 					flog(LOG_WARNING, "socket error on fds[1].fd");
 				} else if (fds[1].revents & POLLIN) {
-					process_netlink_msg(fds[1].fd);
+					int rc = process_netlink_msg(fds[1].fd);
+					if (rc > 0) {
+						IfaceList = reload_config(sock, IfaceList);
+					}
 				}
 			}
 #endif
