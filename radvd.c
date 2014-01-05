@@ -108,8 +108,8 @@ int drop_root_privileges(const char *);
 struct Interface *readin_config(char *);
 int check_conffile_perm(const char *, const char *);
 const char *get_pidfile(void);
-void main_loop(void);
 void check_ifaces(int sock, struct Interface *IfaceList);
+void main_loop(int sock, struct Interface *IfaceList);
 struct Interface *reload_config(int sock, struct Interface *IfaceList);
 
 int main(int argc, char *argv[])
@@ -363,7 +363,7 @@ int main(int argc, char *argv[])
 	config_interface();
 	kickoff_adverts();
 	check_ifaces(sock, IfaceList);
-	main_loop();
+	main_loop(sock, IfaceList);
 	flog(LOG_INFO, "sending stop adverts", pidfile);
 	stop_adverts();
 	if (daemonize) {
@@ -380,7 +380,7 @@ const char *get_pidfile(void)
 	return pidfile;
 }
 
-void main_loop(void)
+void main_loop(int sock, struct Interface *IfaceList)
 {
 	struct pollfd fds[2];
 
