@@ -185,15 +185,6 @@ ifacedef	: ifacehead '{' ifaceparams  '}' ';'
 				iface2 = iface2->next;
 			}
 
-			if (check_iface(iface) < 0)
-				if (!iface->IgnoreIfMissing)
-				ABORT;
-			if (setup_linklocal_addr(iface) < 0)
-				if (!iface->IgnoreIfMissing)
-				ABORT;
-
-			dlog(LOG_DEBUG, 4, "interface definition for %s is ok", iface->Name);
-
 			iface->next = IfaceList;
 			IfaceList = iface;
 
