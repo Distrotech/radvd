@@ -416,9 +416,9 @@ void main_loop(void)
 				struct in6_pktinfo *pkt_info = NULL;
 				unsigned char msg[MSG_SIZE_RECV];
 
-				len = recv_rs_ra(msg, &rcv_addr, &pkt_info, &hoplimit);
+				len = recv_rs_ra(sock, msg, &rcv_addr, &pkt_info, &hoplimit);
 				if (len > 0) {
-					process(IfaceList, msg, len, &rcv_addr, pkt_info, hoplimit);
+					process(sock, IfaceList, msg, len, &rcv_addr, pkt_info, hoplimit);
 				}
 			}
 #ifdef HAVE_NETLINK
@@ -464,7 +464,7 @@ void timer_handler(void *data)
 
 	dlog(LOG_DEBUG, 4, "timer_handler called for %s", iface->Name);
 
-	if (send_ra_forall(iface, NULL) != 0) {
+	if (send_ra_forall(sock, iface, NULL) != 0) {
 		return;
 	}
 
@@ -516,7 +516,7 @@ void kickoff_adverts(void)
 			continue;
 
 		/* send an initial advertisement */
-		if (send_ra_forall(iface, NULL) == 0) {
+		if (send_ra_forall(sock, iface, NULL) == 0) {
 
 			iface->init_racount++;
 
@@ -541,7 +541,7 @@ void stop_adverts(void)
 				/* send a final advertisement with zero Router Lifetime */
 				dlog(LOG_DEBUG, 4, "stopping all adverts on %s.", iface->Name);
 				iface->cease_adv = 1;
-				send_ra_forall(iface, NULL);
+				send_ra_forall(sock, iface, NULL);
 			}
 		}
 	}
