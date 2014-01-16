@@ -40,7 +40,6 @@ int process_netlink_msg(int sock)
 	struct sockaddr_nl sa;
 	struct msghdr msg = { (void *)&sa, sizeof(sa), &iov, 1, NULL, 0, 0 };
 	struct nlmsghdr *nh;
-	char ifnamebuf[IF_NAMESIZE];
 	int rc = 0;
 
 	len = recvmsg(sock, &msg, 0);
@@ -49,6 +48,7 @@ int process_netlink_msg(int sock)
 	}
 
 	for (nh = (struct nlmsghdr *)buf; NLMSG_OK(nh, len); nh = NLMSG_NEXT(nh, len)) {
+		char ifnamebuf[IF_NAMESIZE];
 		/* The end of multipart message. */
 		if (nh->nlmsg_type == NLMSG_DONE)
 			return rc;
