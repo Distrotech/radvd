@@ -223,7 +223,7 @@ int recv_rs_ra(int sock, unsigned char *, struct sockaddr_in6 *, struct in6_pkti
 
 /* util.c */
 double rand_between(double, double);
-void print_addr(struct in6_addr *, char *, size_t);
+void addrtostr(struct in6_addr *, char *, size_t);
 int check_rdnss_presence(struct AdvRDNSS *, struct in6_addr *);
 int check_dnssl_presence(struct AdvDNSSL *, const char *);
 ssize_t readn(int fd, void *buf, size_t count);
