@@ -200,9 +200,10 @@ TESTS = \
 	check/simple_config.sh \
 	check/parse_error.sh \
 	check/kill_radvd_daemon.sh \
-	check/kill_radvd.sh
+	check/kill_radvd.sh \
+	addrtostr
 
-check_SCRIPTS= \
+check_SCRIPTS = \
 	check/multi_interface_config.sh \
 	check/multi_prefix_config.sh \
 	check/rdnss_config.sh \
@@ -210,4 +211,12 @@ check_SCRIPTS= \
 	check/parse_error.sh \
 	check/kill_radvd_daemon.sh \
 	check/kill_radvd.sh
+
+check_PROGRAMS = \
+	addrtostr
+
+addrtostr_SOURCES = \
+	util.c \
+	log.c \
+	check/addrtostr.c
 
