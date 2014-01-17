@@ -26,13 +26,15 @@ void process(int sock, struct Interface *ifacel, unsigned char *msg, int len, st
 	struct Interface *iface;
 	struct icmp6_hdr *icmph;
 	char addr_str[INET6_ADDRSTRLEN];
-	char if_name[IF_NAMESIZE] = { "" };
+	char if_namebuf[IF_NAMESIZE] = { "" };
+	char * if_name;
 
 	print_addr(&addr->sin6_addr, addr_str, sizeof(addr_str));
 
-	/* TODO: handle error...
-	 * On success, if_indextoname() returns ifname; on error, NULL is returned and errno is set appropriately. */
-	if_indextoname(pkt_info->ipi6_ifindex, if_name);
+	if_name = if_indextoname(pkt_info->ipi6_ifindex, if_namebuf);
+	if (!if_name) {
+		if_name = "unknown";
+	}
 	dlog(LOG_DEBUG, 2, "received packet on interface: %d %s", pkt_info->ipi6_ifindex, if_name);
 
 	if (!pkt_info) {
