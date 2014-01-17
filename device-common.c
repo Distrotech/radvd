@@ -116,7 +116,6 @@ int setup_linklocal_addr(struct Interface *iface)
 				continue;
 
 			/* Skip if it is not the interface we're looking for. */
-			/* TODO: Can this be made to check the ifa_index instead? */
 			if (strcmp(ifa->ifa_name, iface->Name) != 0)
 				continue;
 
