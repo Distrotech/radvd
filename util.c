@@ -21,16 +21,17 @@ double rand_between(double lower, double upper)
 	return ((upper - lower) / (RAND_MAX + 1.0) * rand() + lower);
 }
 
+/* This assumes that str is not null and str_size > 0 */
 void addrtostr(struct in6_addr *addr, char *str, size_t str_size)
 {
 	const char *res;
 
-	/* TODO: Will str be null terminated if str isn't big enough? */
 	res = inet_ntop(AF_INET6, (void *)addr, str, str_size);
 
 	if (res == NULL) {
 		flog(LOG_ERR, "addrtostr: inet_ntop: %s", strerror(errno));
-		strcpy(str, "[invalid address]");
+		strncpy(str, "[invalid address]", str_size);
+		str[str_size-1] = '\0';
 	}
 }
 
