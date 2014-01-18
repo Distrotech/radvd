@@ -27,7 +27,7 @@ void process(int sock, struct Interface *ifacel, unsigned char *msg, int len, st
 	struct icmp6_hdr *icmph;
 	char addr_str[INET6_ADDRSTRLEN];
 	char if_namebuf[IF_NAMESIZE] = { "" };
-	char * if_name;
+	char *if_name;
 
 	addrtostr(&addr->sin6_addr, addr_str, sizeof(addr_str));
 

@@ -91,7 +91,7 @@ void config_interfaces(struct Interface *IfaceList);
 void kickoff_adverts(int sock, struct Interface *IfaceList);
 void stop_adverts(int sock, struct Interface *IfaceList);
 void version(void);
-void usage(char const * pname);
+void usage(char const *pname);
 int drop_root_privileges(const char *);
 int check_conffile_perm(const char *, const char *);
 const char *get_pidfile(void);
@@ -115,7 +115,7 @@ int main(int argc, char *argv[])
 	int opt_idx;
 #endif
 
-	char const * pname = ((pname = strrchr(argv[0], '/')) != NULL) ? pname + 1 : argv[0];
+	char const *pname = ((pname = strrchr(argv[0], '/')) != NULL) ? pname + 1 : argv[0];
 
 	srand((unsigned int)time(NULL));
 
@@ -839,7 +839,7 @@ void version(void)
 	exit(1);
 }
 
-void usage(char const * pname)
+void usage(char const *pname)
 {
 	fprintf(stderr, "usage: %s %s\n", pname, usage_str);
 	exit(1);

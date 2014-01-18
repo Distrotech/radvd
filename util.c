@@ -31,7 +31,7 @@ void addrtostr(struct in6_addr *addr, char *str, size_t str_size)
 	if (res == NULL) {
 		flog(LOG_ERR, "addrtostr: inet_ntop: %s", strerror(errno));
 		strncpy(str, "[invalid address]", str_size);
-		str[str_size-1] = '\0';
+		str[str_size - 1] = '\0';
 	}
 }
 
