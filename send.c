@@ -121,7 +121,7 @@ int send_ra(int sock, struct Interface *iface, struct in6_addr *dest)
 	size_t len = 0;
 	ssize_t err;
 
-	if (ensure_iface_setup(sock, iface) < 0) {
+	if (!iface->ready) {
 		dlog(LOG_DEBUG, 3, "Not sending RA for %s, interface is not ready", iface->Name);
 		return 0;
 	}
