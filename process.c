@@ -98,6 +98,11 @@ void process(int sock, struct Interface *ifacel, unsigned char *msg, int len, st
 		return;
 	}
 
+	if (!iface->ready && (0 != setup_iface(iface))) {
+		flog(LOG_WARNING, "received RS or RA on %d but %d is not ready and setup_iface failed", iface->Name, iface->Name);
+		return;
+	}
+
 	if (hoplimit != 255) {
 		flog(LOG_WARNING, "received RS or RA with invalid hoplimit %d from %s", hoplimit, addr_str);
 		return;
