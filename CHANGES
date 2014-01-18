@@ -1,3 +1,7 @@
+2014/01/18	2.0.0-alpha2
+		add RTMGRP_IPV6_IFADDR processing code to netlink
+		refactoring, simplification and code cleanup
+
 2014/01/13	2.0.0-alpha
 		using parser locations
 		the parser can run without root
