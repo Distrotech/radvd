@@ -64,10 +64,10 @@ static struct option prog_opt[] = {
 
 #else
 
-/* TODO: Make sure these are the same as in the long usage string. */
 static char usage_str[] = {
 "[-hsvcn] [-d level] [-C config_file] [-m log_method] [-l log_file]\n"
 "\t[-f facility] [-p pid_file] [-u username] [-t chrootdir]"
+
 };
 
 /* *INDENT-ON* */
@@ -76,7 +76,6 @@ static char usage_str[] = {
 /* TODO: remove global vars. */
 static char *conf_file = NULL;
 static char *pidfile = NULL;
-static char *pname;
 
 static volatile int sighup_received = 0;
 static volatile int sigterm_received = 0;
@@ -92,7 +91,7 @@ void config_interfaces(struct Interface *IfaceList);
 void kickoff_adverts(int sock, struct Interface *IfaceList);
 void stop_adverts(int sock, struct Interface *IfaceList);
 void version(void);
-void usage(void);
+void usage(char const * pname);
 int drop_root_privileges(const char *);
 int check_conffile_perm(const char *, const char *);
 const char *get_pidfile(void);
@@ -116,7 +115,7 @@ int main(int argc, char *argv[])
 	int opt_idx;
 #endif
 
-	pname = ((pname = strrchr(argv[0], '/')) != NULL) ? pname + 1 : argv[0];
+	char const * pname = ((pname = strrchr(argv[0], '/')) != NULL) ? pname + 1 : argv[0];
 
 	srand((unsigned int)time(NULL));
 
@@ -185,7 +184,7 @@ int main(int argc, char *argv[])
 			daemonize = 0;
 			break;
 		case 'h':
-			usage();
+			usage(pname);
 #ifdef HAVE_GETOPT_LONG
 		case ':':
 			fprintf(stderr, "%s: option %s: parameter expected\n", pname, prog_opt[opt_idx].name);
@@ -840,7 +839,7 @@ void version(void)
 	exit(1);
 }
 
-void usage(void)
+void usage(char const * pname)
 {
 	fprintf(stderr, "usage: %s %s\n", pname, usage_str);
 	exit(1);
