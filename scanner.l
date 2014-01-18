@@ -29,9 +29,6 @@
 
 static void user_action(void * p, int lineno, int leng, int * column);
 #define YY_USER_ACTION user_action(yylloc, yylineno, yyleng, &yycolumn);
-
-/* TODO: num lines should be replaced with locations */
-int num_lines = 1;
 %}
 
 digit		[0-9]
@@ -48,7 +45,7 @@ string		[a-zA-Z0-9`~!@#$%\^&*()_\-+=:\[\]<>,\.?\\]+
 %%
 
 #.*$			{/* ignore comments */}
-\n			{num_lines++;}
+\n			{}
 {whitespace}		{}
 
 interface		{ return T_INTERFACE; }
