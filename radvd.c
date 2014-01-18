@@ -506,10 +506,6 @@ void kickoff_adverts(int sock, struct Interface *iface)
 
 	gettimeofday(&iface->last_multicast, NULL);
 
-	/* TODO: AdvSendAdvert is being checked in send_ra now so it can be removed here. */
-	if (!iface->AdvSendAdvert)
-		return;
-
 	/* send an initial advertisement */
 	if (send_ra_forall(sock, iface, NULL) == 0) {
 		double next;
@@ -531,13 +527,10 @@ void stop_adverts(int sock, struct Interface *IfaceList)
 
 	for (iface = IfaceList; iface; iface = iface->next) {
 		if (!iface->UnicastOnly) {
-			/* TODO: AdvSendAdvert is being checked in send_ra now so it can be removed here. */
-			if (iface->AdvSendAdvert) {
-				/* send a final advertisement with zero Router Lifetime */
-				dlog(LOG_DEBUG, 4, "stopping all adverts on %s.", iface->Name);
-				iface->cease_adv = 1;
-				send_ra_forall(sock, iface, NULL);
-			}
+			/* send a final advertisement with zero Router Lifetime */
+			dlog(LOG_DEBUG, 4, "stopping all adverts on %s.", iface->Name);
+			iface->cease_adv = 1;
+			send_ra_forall(sock, iface, NULL);
 		}
 	}
 }
