@@ -1016,7 +1016,7 @@ static void yyerror(void const * loc, void * vp, char const * msg)
 	}
 }
 
-struct Interface * readin_config(char *fname)
+struct Interface * readin_config(char const *fname)
 {
 	struct yydata yydata;
 	FILE * in;
