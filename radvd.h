@@ -179,7 +179,6 @@ struct Interface *readin_config(char const *fname);
 /* radvd.c */
 int check_ip6_forwarding(void);
 int ensure_iface_setup(int sock, struct Interface *iface);
-struct Interface *reload_config(int sock, struct Interface *IfaceList);
 
 /* timer.c */
 struct timeval next_timeval(double next);

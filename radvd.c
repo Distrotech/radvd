@@ -74,7 +74,6 @@ static char usage_str[] = {
 #endif
 
 /* TODO: remove global vars. */
-static char *conf_file = NULL;
 static char *pidfile = NULL;
 
 static volatile int sighup_received = 0;
@@ -97,8 +96,9 @@ int check_conffile_perm(const char *, const char *);
 const char *get_pidfile(void);
 int setup_iface(int sock, struct Interface *iface);
 void setup_ifaces(int sock, struct Interface *IfaceList);
-void main_loop(int sock, struct Interface *IfaceList);
+void main_loop(int sock, struct Interface *IfaceList, char const *conf_file);
 void reset_prefix_lifetimes(struct Interface *IfaceList);
+struct Interface *reload_config(int sock, struct Interface *IfaceList, char const *conf_file);
 
 int main(int argc, char *argv[])
 {
@@ -121,7 +121,7 @@ int main(int argc, char *argv[])
 
 	log_method = L_STDERR_SYSLOG;
 	logfile = PATH_RADVD_LOG;
-	conf_file = PATH_RADVD_CONF;
+	char const * conf_file = PATH_RADVD_CONF;
 	facility = LOG_FACILITY;
 	pidfile = PATH_RADVD_PID;
 
@@ -342,7 +342,7 @@ int main(int argc, char *argv[])
 	signal(SIGUSR1, sigusr1_handler);
 
 	setup_ifaces(sock, IfaceList);
-	main_loop(sock, IfaceList);
+	main_loop(sock, IfaceList, conf_file);
 	flog(LOG_INFO, "sending stop adverts", pidfile);
 	stop_adverts(sock, IfaceList);
 	if (daemonize) {
@@ -359,7 +359,7 @@ const char *get_pidfile(void)
 	return pidfile;
 }
 
-void main_loop(int sock, struct Interface *IfaceList)
+void main_loop(int sock, struct Interface *IfaceList, char const *conf_file)
 {
 	struct pollfd fds[2];
 
@@ -446,7 +446,7 @@ void main_loop(int sock, struct Interface *IfaceList)
 
 		if (sighup_received) {
 			dlog(LOG_INFO, 3, "sig hup received.");
-			IfaceList = reload_config(sock, IfaceList);
+			IfaceList = reload_config(sock, IfaceList, conf_file);
 			sighup_received = 0;
 		}
 
@@ -585,7 +585,7 @@ void setup_ifaces(int sock, struct Interface *IfaceList)
 	}
 }
 
-struct Interface *reload_config(int sock, struct Interface *IfaceList)
+struct Interface *reload_config(int sock, struct Interface *IfaceList, char const *conf_file)
 {
 	struct Interface *iface = IfaceList;
 
