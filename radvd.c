@@ -73,9 +73,6 @@ static char usage_str[] = {
 /* *INDENT-ON* */
 #endif
 
-/* TODO: remove global vars. */
-static char *pidfile = NULL;
-
 static volatile int sighup_received = 0;
 static volatile int sigterm_received = 0;
 static volatile int sigint_received = 0;
@@ -93,7 +90,7 @@ void version(void);
 void usage(char const *pname);
 int drop_root_privileges(const char *);
 int check_conffile_perm(const char *, const char *);
-const char *get_pidfile(void);
+const char *radvd_get_pidfile(void);
 int setup_iface(int sock, struct Interface *iface);
 void setup_ifaces(int sock, struct Interface *IfaceList);
 void main_loop(int sock, struct Interface *IfaceList, char const *conf_file);
@@ -123,7 +120,7 @@ int main(int argc, char *argv[])
 	logfile = PATH_RADVD_LOG;
 	char const * conf_file = PATH_RADVD_CONF;
 	facility = LOG_FACILITY;
-	pidfile = PATH_RADVD_PID;
+	daemon_pid_file_ident = PATH_RADVD_PID; /* libdaemon defines daemon_pid_file_ident */
 
 	/* parse args */
 #define OPTIONS_STR "d:C:l:m:p:t:u:vhcsn"
@@ -147,7 +144,7 @@ int main(int argc, char *argv[])
 			logfile = optarg;
 			break;
 		case 'p':
-			pidfile = optarg;
+			daemon_pid_file_ident = optarg;
 			break;
 		case 'm':
 			if (!strcmp(optarg, "syslog")) {
@@ -273,6 +270,7 @@ int main(int argc, char *argv[])
 			exit(1);
 		}
 
+		/* TODO: research daemon_log (in libdaemon) and have it log the same as radvd. */
 		pid = daemon_fork();
 
 		if (-1 == pid) {
@@ -305,7 +303,7 @@ int main(int argc, char *argv[])
 			}
 		}
 
-		daemon_pid_file_proc = get_pidfile;
+		daemon_pid_file_proc = radvd_get_pidfile;
 
 		if (daemon_pid_file_is_running() >= 0) {
 			daemon_retval_send(1);
@@ -343,20 +341,29 @@ int main(int argc, char *argv[])
 
 	setup_ifaces(sock, IfaceList);
 	main_loop(sock, IfaceList, conf_file);
-	flog(LOG_INFO, "sending stop adverts", pidfile);
+	flog(LOG_INFO, "sending stop adverts");
 	stop_adverts(sock, IfaceList);
 	if (daemonize) {
-		flog(LOG_INFO, "removing %s", pidfile);
-		unlink(pidfile);
+		flog(LOG_INFO, "removing %s", daemon_pid_file_ident);
+		daemon_pid_file_remove();
 	}
 
 	flog(LOG_INFO, "returning from radvd main");
 	return 0;
 }
 
-const char *get_pidfile(void)
-{
-	return pidfile;
+/* This function is copied from dpid.c (in libdaemon) and renamed. */
+const char *radvd_get_pidfile(void) {
+#ifdef HAVE_ASPRINTF
+    static char *fn = NULL;
+    free(fn);
+    asprintf(&fn,  "%s", daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
+#else
+    static char fn[PATH_MAX];
+    snprintf(fn, sizeof(fn), "%s", daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
+#endif
+
+    return fn;
 }
 
 void main_loop(int sock, struct Interface *IfaceList, char const *conf_file)
