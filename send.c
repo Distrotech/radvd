@@ -121,8 +121,8 @@ int send_ra(int sock, struct Interface *iface, struct in6_addr *dest)
 	size_t len = 0;
 	ssize_t err;
 
-	/* TODO: write a test to make sure this doesn't happen, and remove this check. */
-	if (!iface->ready) {
+	/* when netlink is not available (disabled or BSD), ensure_iface_setup is necessary. */
+	if (ensure_iface_setup(sock, iface) < 0) {
 		dlog(LOG_DEBUG, 3, "Not sending RA for %s, interface is not ready", iface->Name);
 		return 0;
 	}
