@@ -603,59 +603,9 @@ void setup_ifaces(int sock, struct Interface *IfaceList)
 
 struct Interface *reload_config(int sock, struct Interface *IfaceList, char const *conf_file)
 {
-	struct Interface *iface = IfaceList;
+	free_ifaces(IfaceList);
 
 	flog(LOG_INFO, "attempting to reread config file");
-
-	while (iface) {
-		struct Interface *next_iface = iface->next;
-		struct AdvPrefix *prefix;
-		struct AdvRoute *route;
-		struct AdvRDNSS *rdnss;
-		struct AdvDNSSL *dnssl;
-
-		dlog(LOG_DEBUG, 4, "freeing interface %s", iface->Name);
-
-		prefix = iface->AdvPrefixList;
-		while (prefix) {
-			struct AdvPrefix *next_prefix = prefix->next;
-
-			free(prefix);
-			prefix = next_prefix;
-		}
-
-		route = iface->AdvRouteList;
-		while (route) {
-			struct AdvRoute *next_route = route->next;
-
-			free(route);
-			route = next_route;
-		}
-
-		rdnss = iface->AdvRDNSSList;
-		while (rdnss) {
-			struct AdvRDNSS *next_rdnss = rdnss->next;
-
-			free(rdnss);
-			rdnss = next_rdnss;
-		}
-
-		dnssl = iface->AdvDNSSLList;
-		while (dnssl) {
-			struct AdvDNSSL *next_dnssl = dnssl->next;
-			int i;
-
-			for (i = 0; i < dnssl->AdvDNSSLNumber; i++)
-				free(dnssl->AdvDNSSLSuffixes[i]);
-			free(dnssl->AdvDNSSLSuffixes);
-			free(dnssl);
-
-			dnssl = next_dnssl;
-		}
-
-		free(iface);
-		iface = next_iface;
-	}
 
 	IfaceList = NULL;
 
