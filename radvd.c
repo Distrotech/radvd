@@ -85,6 +85,7 @@ void sigusr1_handler(int sig);
 void timer_handler(int sock, struct Interface *iface);
 void config_interfaces(struct Interface *IfaceList);
 void kickoff_adverts(int sock, struct Interface *IfaceList);
+void stop_advert_foo(struct Interface * iface, void * data);
 void stop_adverts(int sock, struct Interface *IfaceList);
 void version(void);
 void usage(char const *pname);
@@ -92,8 +93,10 @@ int drop_root_privileges(const char *);
 int check_conffile_perm(const char *, const char *);
 const char *radvd_get_pidfile(void);
 int setup_iface(int sock, struct Interface *iface);
+void setup_iface_foo(struct Interface * iface, void * data);
 void setup_ifaces(int sock, struct Interface *IfaceList);
 void main_loop(int sock, struct Interface *IfaceList, char const *conf_file);
+void reset_prefix_lifetimes_foo(struct Interface *iface, void * data);
 void reset_prefix_lifetimes(struct Interface *IfaceList);
 struct Interface *reload_config(int sock, struct Interface *IfaceList, char const *conf_file);
 
@@ -515,22 +518,24 @@ void kickoff_adverts(int sock, struct Interface *iface)
 	}
 }
 
+void stop_advert_foo(struct Interface * iface, void * data)
+{
+	int sock = *(int*)data;
+
+	if (!iface->UnicastOnly) {
+		/* send a final advertisement with zero Router Lifetime */
+		dlog(LOG_DEBUG, 4, "stopping all adverts on %s.", iface->Name);
+		iface->cease_adv = 1;
+		send_ra_forall(sock, iface, NULL);
+	}
+}
+
 void stop_adverts(int sock, struct Interface *IfaceList)
 {
-	struct Interface *iface;
-
 	/*
 	 *      send final RA (a SHOULD in RFC4861 section 6.2.5)
 	 */
-
-	for (iface = IfaceList; iface; iface = iface->next) {
-		if (!iface->UnicastOnly) {
-			/* send a final advertisement with zero Router Lifetime */
-			dlog(LOG_DEBUG, 4, "stopping all adverts on %s.", iface->Name);
-			iface->cease_adv = 1;
-			send_ra_forall(sock, iface, NULL);
-		}
-	}
+	for_each_iface(IfaceList, stop_advert_foo, &sock);
 }
 
 int setup_iface(int sock, struct Interface *iface)
@@ -565,6 +570,29 @@ int setup_iface(int sock, struct Interface *iface)
 	return 0;
 }
 
+void setup_iface_foo(struct Interface * iface, void * data)
+{
+	int sock = *(int*)data;
+
+	if (setup_iface(sock, iface) < 0) {
+		if (iface->IgnoreIfMissing) {
+			dlog(LOG_DEBUG, 4, "interface %s does not exist or is not set up properly, ignoring the interface", iface->Name);
+		} else {
+			flog(LOG_ERR, "interface %s does not exist or is not set up properly", iface->Name);
+			exit(1);
+		}
+	}
+
+	/* TODO: call these for changed interfaces only */
+	config_interface(iface);
+	kickoff_adverts(sock, iface);
+}
+
+void setup_ifaces(int sock, struct Interface *IfaceList)
+{
+	for_each_iface(IfaceList, setup_iface_foo, &sock);
+}
+
 int ensure_iface_setup(int sock, struct Interface *iface)
 {
 #ifndef HAVE_NETLINK
@@ -572,25 +600,6 @@ int ensure_iface_setup(int sock, struct Interface *iface)
 #endif
 
 	return (iface->ready ? 0 : -1);
-}
-
-void setup_ifaces(int sock, struct Interface *IfaceList)
-{
-	struct Interface *iface;
-	for (iface = IfaceList; iface; iface = iface->next) {
-		if (setup_iface(sock, iface) < 0) {
-			if (iface->IgnoreIfMissing) {
-				dlog(LOG_DEBUG, 4, "interface %s does not exist or is not set up properly, ignoring the interface", iface->Name);
-			} else {
-				flog(LOG_ERR, "interface %s does not exist or is not set up properly", iface->Name);
-				exit(1);
-			}
-		}
-
-		/* TODO: call these for changed interfaces only */
-		config_interface(iface);
-		kickoff_adverts(sock, iface);
-	}
 }
 
 struct Interface *reload_config(int sock, struct Interface *IfaceList, char const *conf_file)
@@ -653,30 +662,31 @@ void sigusr1_handler(int sig)
 	sigusr1_received = 1;
 }
 
-void reset_prefix_lifetimes(struct Interface *IfaceList)
+void reset_prefix_lifetimes_foo(struct Interface *iface, void * data)
 {
-	struct Interface *iface;
 	struct AdvPrefix *prefix;
 	char pfx_str[INET6_ADDRSTRLEN];
 
-	flog(LOG_INFO, "Resetting prefix lifetimes");
+	flog(LOG_INFO, "Resetting prefix lifetimes on %s", iface->Name);
 
-	for (iface = IfaceList; iface; iface = iface->next) {
-		for (prefix = iface->AdvPrefixList; prefix; prefix = prefix->next) {
-			if (prefix->DecrementLifetimesFlag) {
-				addrtostr(&prefix->Prefix, pfx_str, sizeof(pfx_str));
-				dlog(LOG_DEBUG, 4, "%s/%u%%%s plft reset from %u to %u secs", pfx_str, prefix->PrefixLen, iface->Name, prefix->curr_preferredlft,
-				     prefix->AdvPreferredLifetime);
-				dlog(LOG_DEBUG, 4, "%s/%u%%%s vlft reset from %u to %u secs", pfx_str, prefix->PrefixLen, iface->Name, prefix->curr_validlft,
-				     prefix->AdvValidLifetime);
-				prefix->curr_validlft = prefix->AdvValidLifetime;
-				prefix->curr_preferredlft = prefix->AdvPreferredLifetime;
-			}
+	for (prefix = iface->AdvPrefixList; prefix; prefix = prefix->next) {
+		if (prefix->DecrementLifetimesFlag) {
+			addrtostr(&prefix->Prefix, pfx_str, sizeof(pfx_str));
+			dlog(LOG_DEBUG, 4, "%s/%u%%%s plft reset from %u to %u secs", pfx_str, prefix->PrefixLen, iface->Name, prefix->curr_preferredlft,
+			     prefix->AdvPreferredLifetime);
+			dlog(LOG_DEBUG, 4, "%s/%u%%%s vlft reset from %u to %u secs", pfx_str, prefix->PrefixLen, iface->Name, prefix->curr_validlft,
+			     prefix->AdvValidLifetime);
+			prefix->curr_validlft = prefix->AdvValidLifetime;
+			prefix->curr_preferredlft = prefix->AdvPreferredLifetime;
 		}
-
 	}
-
 }
+
+void reset_prefix_lifetimes(struct Interface *IfaceList)
+{
+	for_each_iface(IfaceList, reset_prefix_lifetimes_foo, 0);
+}
+
 
 int drop_root_privileges(const char *username)
 {
