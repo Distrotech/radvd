@@ -383,26 +383,18 @@ void main_loop(int sock, struct Interface *IfaceList, char const *conf_file)
 #endif
 
 	for (;;) {
-		struct Interface *next = NULL;
-		struct Interface *iface;
-		int timeout = -1;	/* negative timeout means poll waits forever until IO */
+		struct Interface *next_iface_to_expire;
+		int timeout;
 		int rc;
 
-		if (IfaceList) {
-			/* TODO: This is a great place to use a min heap. */
-			timeout = next_time_msec(IfaceList);
-			next = IfaceList;
-			for (iface = IfaceList; iface; iface = iface->next) {
-				int t;
-				t = next_time_msec(iface);
-				if (timeout > t) {
-					timeout = t;
-					next = iface;
-				}
-			}
+		next_iface_to_expire = find_iface_by_time(IfaceList);
+		if (next_iface_to_expire) {
+			timeout = next_time_msec(next_iface_to_expire);
+		} else {
+			timeout = -1;	/* negative timeout means poll waits forever for IO or a signal */
 		}
 
-		dlog(LOG_DEBUG, 5, "polling for %g seconds. Next iface is %s.", timeout / 1000.0, next->Name);
+		dlog(LOG_DEBUG, 5, "polling for %g seconds. Next iface is %s.", timeout / 1000.0, next_iface_to_expire->Name);
 
 		rc = poll(fds, sizeof(fds) / sizeof(fds[0]), timeout);
 
@@ -435,8 +427,8 @@ void main_loop(int sock, struct Interface *IfaceList, char const *conf_file)
 				}
 			}
 		} else if (rc == 0) {
-			if (next)
-				timer_handler(sock, next);
+			if (next_iface_to_expire)
+				timer_handler(sock, next_iface_to_expire);
 		} else if (rc == -1) {
 			dlog(LOG_INFO, 3, "poll returned early: %s", strerror(errno));
 		}
