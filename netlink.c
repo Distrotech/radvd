@@ -80,13 +80,10 @@ int process_netlink_msg(int sock)
 			/* TODO: This block of code can make the netlink messages finer grained.  Right now
 			 * we just check the return value of this function and reload the whole config.  We
 			 * don't really need to do that.  We can just reinit the interfaces which need it. */
-			/* TODO: This would be a good place for a hash table lookup */
-			for (iface = IfaceList; iface; iface = iface->next) {
-				if (iface->if_index == ifinfo->ifi_index) {
-					double next;
-					iface->init_racount = 0;
-					iface->next_multicast = next_timeval(0);
-				}
+			iface = find_iface_by_index(IfaceList, ifinfo->ifi_index);
+			if (iface) {
+				iface->init_racount = 0;
+				iface->next_multicast = next_timeval(0);
 			}
 #endif
 
