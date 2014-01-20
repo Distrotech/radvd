@@ -205,6 +205,11 @@ void route_init_defaults(struct AdvRoute *, struct Interface *);
 void rdnss_init_defaults(struct AdvRDNSS *, struct Interface *);
 void dnssl_init_defaults(struct AdvDNSSL *, struct Interface *);
 int check_iface(struct Interface *);
+struct Interface * find_iface_by_name(void * interfaces, char const * name);
+struct Interface * find_iface_by_index(void * interfaces, int index);
+struct Interface * find_iface_by_time(void * interfaces);
+void for_each_iface(void * interfaces, void (*foo)(struct Interface*, void*), void * data);
+void free_ifaces(void * interfaces);
 
 /* socket.c */
 int open_icmpv6_socket(void);

@@ -206,3 +206,116 @@ int check_iface(struct Interface *iface)
 
 	return res;
 }
+
+struct Interface * find_iface_by_name(void * interfaces, char const * name)
+{
+	struct Interface * IfaceList = (struct Interface *)interfaces;
+	struct Interface * iface;
+	/* TODO: This is a great place to use a binary search on an array sorted by name */
+	for (iface = IfaceList; iface; iface = iface->next) {
+		if (0 == strcmp(iface->Name, name)) {
+			return iface;
+		}
+	}
+	return 0;
+}
+
+struct Interface * find_iface_by_index(void * interfaces, int index)
+{
+	struct Interface * IfaceList = (struct Interface *)interfaces;
+	struct Interface * iface;
+	/* TODO: This is a great place to use a hash table */
+	for (iface = IfaceList; iface; iface = iface->next) {
+		if (iface->if_index == index) {
+			return iface;
+		}
+	}
+	return 0;
+}
+
+struct Interface * find_iface_by_time(void * interfaces)
+{
+	struct Interface * IfaceList = (struct Interface *)interfaces;
+	struct Interface *needle = NULL;
+	/* TODO: This is a great place to use a min heap. */
+	if (IfaceList) {
+		struct Interface * iface;
+		int timeout = next_time_msec(IfaceList);
+		needle = IfaceList;
+		for (iface = IfaceList->next; iface; iface = iface->next) {
+			int t;
+			t = next_time_msec(iface);
+			if (timeout > t) {
+				timeout = t;
+				needle = iface;
+			}
+		}
+	}
+	return needle;
+}
+
+void for_each_iface(void * interfaces, void (*foo)(struct Interface*, void*), void * data)
+{
+	struct Interface * iface = (struct Interface *)interfaces;
+
+	for (; iface; iface = iface->next) {
+		foo(iface, data);
+	}
+}
+
+void free_ifaces(void * interfaces)
+{
+	struct Interface * iface= (struct Interface *)interfaces;
+
+	flog(LOG_INFO, "Freeing Interfaces");
+
+	while (iface) {
+		struct Interface *next_iface = iface->next;
+		struct AdvPrefix *prefix;
+		struct AdvRoute *route;
+		struct AdvRDNSS *rdnss;
+		struct AdvDNSSL *dnssl;
+
+		dlog(LOG_DEBUG, 4, "freeing interface %s", iface->Name);
+
+		prefix = iface->AdvPrefixList;
+		while (prefix) {
+			struct AdvPrefix *next_prefix = prefix->next;
+
+			free(prefix);
+			prefix = next_prefix;
+		}
+
+		route = iface->AdvRouteList;
+		while (route) {
+			struct AdvRoute *next_route = route->next;
+
+			free(route);
+			route = next_route;
+		}
+
+		rdnss = iface->AdvRDNSSList;
+		while (rdnss) {
+			struct AdvRDNSS *next_rdnss = rdnss->next;
+
+			free(rdnss);
+			rdnss = next_rdnss;
+		}
+
+		dnssl = iface->AdvDNSSLList;
+		while (dnssl) {
+			struct AdvDNSSL *next_dnssl = dnssl->next;
+			int i;
+
+			for (i = 0; i < dnssl->AdvDNSSLNumber; i++)
+				free(dnssl->AdvDNSSLSuffixes[i]);
+			free(dnssl->AdvDNSSLSuffixes);
+			free(dnssl);
+
+			dnssl = next_dnssl;
+		}
+
+		free(iface);
+		iface = next_iface;
+	}
+}
