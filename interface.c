@@ -216,39 +216,39 @@ void iface_index_changed(struct Interface *iface)
 	*iface->flags = 1;
 }
 
-static int compare_by_index(void const * a, void const * b)
+static int compare_by_index(void const *a, void const *b)
 {
-	return (*(struct Interface**)b)->if_index - (*(struct Interface**)a)->if_index;
+	return (*(struct Interface **)b)->if_index - (*(struct Interface **)a)->if_index;
 }
 
-struct Interface * find_iface_by_index(void * interfaces, int index)
+struct Interface *find_iface_by_index(void *interfaces, int index)
 {
-	struct interfaces * ifaces = (struct interfaces *)interfaces;
+	struct interfaces *ifaces = (struct interfaces *)interfaces;
 	if (ifaces->flags) {
 		flog(LOG_INFO, "by_index array is dirty, resorting %d interfaces", ifaces->count);
-		qsort(ifaces->by_index, ifaces->count, sizeof(struct Interface*), compare_by_index);
+		qsort(ifaces->by_index, ifaces->count, sizeof(struct Interface *), compare_by_index);
 		ifaces->flags &= ~0x1;
 	}
 	flog(LOG_INFO, "bsearching %d Interfaces", ifaces->count);
 	struct Interface iface;
 	memset(&iface, 0, sizeof(iface));
 	iface.if_index = index;
-	struct Interface * key = &iface;
-	struct Interface ** item = bsearch(&key, ifaces->by_index, ifaces->count, sizeof(struct Interface*), compare_by_index);
+	struct Interface *key = &iface;
+	struct Interface **item = bsearch(&key, ifaces->by_index, ifaces->count, sizeof(struct Interface *), compare_by_index);
 	if (!item) {
 		return 0;
 	}
 	return *item;
 }
 
-struct Interface * find_iface_by_time(void * interfaces)
+struct Interface *find_iface_by_time(void *interfaces)
 {
-	struct interfaces * ifaces = (struct interfaces *)interfaces;
-	struct Interface * IfaceList = ifaces->IfaceList;
-	struct Interface * needle = NULL;
+	struct interfaces *ifaces = (struct interfaces *)interfaces;
+	struct Interface *IfaceList = ifaces->IfaceList;
+	struct Interface *needle = NULL;
 	/* TODO: This is a great place to use a min heap. */
 	if (IfaceList) {
-		struct Interface * iface;
+		struct Interface *iface;
 		int timeout = next_time_msec(IfaceList);
 		needle = IfaceList;
 		for (iface = IfaceList->next; iface; iface = iface->next) {
@@ -263,17 +263,17 @@ struct Interface * find_iface_by_time(void * interfaces)
 	return needle;
 }
 
-void for_each_iface(void * interfaces, void (*foo)(struct Interface*, void*), void * data)
+void for_each_iface(void *interfaces, void (*foo) (struct Interface *, void *), void *data)
 {
-	struct interfaces * ifaces = (struct interfaces *)interfaces;
-	struct Interface * iface = ifaces->IfaceList;
+	struct interfaces *ifaces = (struct interfaces *)interfaces;
+	struct Interface *iface = ifaces->IfaceList;
 
 	for (; iface; iface = iface->next) {
 		foo(iface, data);
 	}
 }
 
-void free_iface_list(struct Interface * iface)
+void free_iface_list(struct Interface *iface)
 {
 	while (iface) {
 		struct Interface *next_iface = iface->next;
@@ -326,11 +326,11 @@ void free_iface_list(struct Interface * iface)
 	}
 }
 
-void free_ifaces(void * interfaces)
+void free_ifaces(void *interfaces)
 {
 	flog(LOG_INFO, "Freeing Interfaces");
 
-	struct interfaces * ifaces = (struct interfaces *)interfaces;
+	struct interfaces *ifaces = (struct interfaces *)interfaces;
 
 	free_iface_list(ifaces->IfaceList);
 

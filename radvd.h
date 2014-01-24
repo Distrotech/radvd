@@ -176,8 +176,8 @@ struct HomeAgentInfo {
 
 struct interfaces {
 	int count;
-	struct Interface * IfaceList;
-	struct Interface ** by_index;
+	struct Interface *IfaceList;
+	struct Interface **by_index;
 	unsigned int flags;
 };
 
@@ -215,11 +215,11 @@ void rdnss_init_defaults(struct AdvRDNSS *, struct Interface *);
 void dnssl_init_defaults(struct AdvDNSSL *, struct Interface *);
 int check_iface(struct Interface *);
 void iface_index_changed(struct Interface *iface);
-struct Interface * find_iface_by_index(void * interfaces, int index);
-struct Interface * find_iface_by_time(void * interfaces);
-void for_each_iface(void * interfaces, void (*foo)(struct Interface*, void*), void * data);
-void free_iface_list(struct Interface * iface);
-void free_ifaces(void * interfaces);
+struct Interface *find_iface_by_index(void *interfaces, int index);
+struct Interface *find_iface_by_time(void *interfaces);
+void for_each_iface(void *interfaces, void (*foo) (struct Interface *, void *), void *data);
+void free_iface_list(struct Interface *iface);
+void free_ifaces(void *interfaces);
 
 /* socket.c */
 int open_icmpv6_socket(void);

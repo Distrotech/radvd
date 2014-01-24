@@ -138,7 +138,6 @@ int setup_linklocal_addr(struct Interface *iface)
 	return -1;
 }
 
-
 /*
  * This function updates the if_index of an interface.  If the
  * if index changes, then return 1 to let the calling code know
@@ -160,5 +159,3 @@ int update_device_index(struct Interface *iface)
 	}
 	return retval;
 }
-
-

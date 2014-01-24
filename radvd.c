@@ -85,7 +85,7 @@ void sigusr1_handler(int sig);
 void timer_handler(int sock, struct Interface *iface);
 void config_interfaces(void *interfaces);
 void kickoff_adverts(int sock, struct Interface *iface);
-void stop_advert_foo(struct Interface * iface, void * data);
+void stop_advert_foo(struct Interface *iface, void *data);
 void stop_adverts(int sock, void *interfaces);
 void version(void);
 void usage(char const *pname);
@@ -93,10 +93,10 @@ int drop_root_privileges(const char *);
 int check_conffile_perm(const char *, const char *);
 const char *radvd_get_pidfile(void);
 int setup_iface(int sock, struct Interface *iface);
-void setup_iface_foo(struct Interface * iface, void * data);
+void setup_iface_foo(struct Interface *iface, void *data);
 void setup_ifaces(int sock, void *interfaces);
 void main_loop(int sock, void *interfaces, char const *conf_file);
-void reset_prefix_lifetimes_foo(struct Interface *iface, void * data);
+void reset_prefix_lifetimes_foo(struct Interface *iface, void *data);
 void reset_prefix_lifetimes(void *interfaces);
 struct Interface *reload_config(int sock, void *interfaces, char const *conf_file);
 
@@ -121,9 +121,9 @@ int main(int argc, char *argv[])
 
 	log_method = L_STDERR_SYSLOG;
 	logfile = PATH_RADVD_LOG;
-	char const * conf_file = PATH_RADVD_CONF;
+	char const *conf_file = PATH_RADVD_CONF;
 	facility = LOG_FACILITY;
-	daemon_pid_file_ident = PATH_RADVD_PID; /* libdaemon defines daemon_pid_file_ident */
+	daemon_pid_file_ident = PATH_RADVD_PID;	/* libdaemon defines daemon_pid_file_ident */
 
 	/* parse args */
 #define OPTIONS_STR "d:C:l:m:p:t:u:vhcsn"
@@ -356,17 +356,18 @@ int main(int argc, char *argv[])
 }
 
 /* This function is copied from dpid.c (in libdaemon) and renamed. */
-const char *radvd_get_pidfile(void) {
+const char *radvd_get_pidfile(void)
+{
 #ifdef HAVE_ASPRINTF
-    static char *fn = NULL;
-    free(fn);
-    asprintf(&fn,  "%s", daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
+	static char *fn = NULL;
+	free(fn);
+	asprintf(&fn, "%s", daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
 #else
-    static char fn[PATH_MAX];
-    snprintf(fn, sizeof(fn), "%s", daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
+	static char fn[PATH_MAX];
+	snprintf(fn, sizeof(fn), "%s", daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
 #endif
 
-    return fn;
+	return fn;
 }
 
 void main_loop(int sock, void *interfaces, char const *conf_file)
@@ -518,9 +519,9 @@ void kickoff_adverts(int sock, struct Interface *iface)
 	}
 }
 
-void stop_advert_foo(struct Interface * iface, void * data)
+void stop_advert_foo(struct Interface *iface, void *data)
 {
-	int sock = *(int*)data;
+	int sock = *(int *)data;
 
 	if (!iface->UnicastOnly) {
 		/* send a final advertisement with zero Router Lifetime */
@@ -550,41 +551,45 @@ int setup_iface(int sock, struct Interface *iface)
 	switch (rc) {
 	case 1:
 		/* the iface index changed */
-		iface_index_changed(iface);/**/
-	break;
+		iface_index_changed(iface);
+		/**/ break;
 
 	case 2:
 		/* the iface index failed */
 		return -1;
-	break;
+		break;
 
 	case 3:
 		/* the iface index changed and failed */
-		iface_index_changed(iface);/**/
-		return -1;
-	break;
+		iface_index_changed(iface);
+		/**/ return -1;
+		break;
 
 	default:
 		/* Nothing changed and nothing failed. */
-	break;
+		break;
 	}
 
 	/* Set iface->if_index, iface->max_mtu and iface hardware address */
-	if (update_device_info(sock, iface) < 0)
+	if (update_device_info(sock, iface) < 0) {
 		return -1;
+	}
 
 	/* Make sure the settings in the config file for this interface are ok (this depends
 	 * on iface->max_mtu already being set). */
-	if (check_iface(iface) < 0)
+	if (check_iface(iface) < 0) {
 		return -1;
+	}
 
 	/* Save the first link local address seen on the specified interface to iface->if_addr */
-	if (setup_linklocal_addr(iface) < 0)
+	if (setup_linklocal_addr(iface) < 0) {
 		return -1;
+	}
 
 	/* join the allrouters multicast group so we get the solicitations */
-	if (setup_allrouters_membership(sock, iface) < 0)
+	if (setup_allrouters_membership(sock, iface) < 0) {
 		return -1;
+	}
 
 	iface->ready = 1;
 
@@ -593,9 +598,9 @@ int setup_iface(int sock, struct Interface *iface)
 	return 0;
 }
 
-void setup_iface_foo(struct Interface * iface, void * data)
+void setup_iface_foo(struct Interface *iface, void *data)
 {
-	int sock = *(int*)data;
+	int sock = *(int *)data;
 
 	if (setup_iface(sock, iface) < 0) {
 		if (iface->IgnoreIfMissing) {
@@ -685,7 +690,7 @@ void sigusr1_handler(int sig)
 	sigusr1_received = 1;
 }
 
-void reset_prefix_lifetimes_foo(struct Interface *iface, void * data)
+void reset_prefix_lifetimes_foo(struct Interface *iface, void *data)
 {
 	struct AdvPrefix *prefix;
 	char pfx_str[INET6_ADDRSTRLEN];
@@ -697,8 +702,7 @@ void reset_prefix_lifetimes_foo(struct Interface *iface, void * data)
 			addrtostr(&prefix->Prefix, pfx_str, sizeof(pfx_str));
 			dlog(LOG_DEBUG, 4, "%s/%u%%%s plft reset from %u to %u secs", pfx_str, prefix->PrefixLen, iface->Name, prefix->curr_preferredlft,
 			     prefix->AdvPreferredLifetime);
-			dlog(LOG_DEBUG, 4, "%s/%u%%%s vlft reset from %u to %u secs", pfx_str, prefix->PrefixLen, iface->Name, prefix->curr_validlft,
-			     prefix->AdvValidLifetime);
+			dlog(LOG_DEBUG, 4, "%s/%u%%%s vlft reset from %u to %u secs", pfx_str, prefix->PrefixLen, iface->Name, prefix->curr_validlft, prefix->AdvValidLifetime);
 			prefix->curr_validlft = prefix->AdvValidLifetime;
 			prefix->curr_preferredlft = prefix->AdvPreferredLifetime;
 		}
@@ -709,7 +713,6 @@ void reset_prefix_lifetimes(void *interfaces)
 {
 	for_each_iface(interfaces, reset_prefix_lifetimes_foo, 0);
 }
-
 
 int drop_root_privileges(const char *username)
 {
