@@ -30,16 +30,6 @@ static void yyerror(void const * loc, void * vp, char const * s);
 #include "radvd.h"
 #include "defaults.h"
 
-static struct Interface *IfaceList = NULL;
-static struct Interface *iface = NULL;
-static struct AdvPrefix *prefix = NULL;
-static struct AdvRoute *route = NULL;
-static struct AdvRDNSS *rdnss = NULL;
-static struct AdvDNSSL *dnssl = NULL;
-
-extern char *yytext;
-
-static void cleanup(void);
 static int countbits(int b);
 static int count_mask(struct sockaddr_in6 *m);
 static struct in6_addr get_prefix6(struct in6_addr const *addr, struct in6_addr const *mask);
@@ -53,13 +43,12 @@ static struct in6_addr get_prefix6(struct in6_addr const *addr, struct in6_addr 
 #endif
 #endif
 
-#define ABORT	do { cleanup(); YYABORT; } while (0);
 #define ADD_TO_LL(type, list, value) \
 	do { \
-		if (iface->list == NULL) \
-			iface->list = value; \
+		if (yydata->iface->list == NULL) \
+			yydata->iface->list = value; \
 		else { \
-			type *current = iface->list; \
+			type *current = yydata->iface->list; \
 			while (current->next != NULL) \
 				current = current->next; \
 			current->next = value; \
@@ -160,8 +149,16 @@ struct yydata
 {
 	yyscan_t scaninfo;
 	char const * filename;
+	int interface_count;
+	struct Interface *IfaceList;
+	struct Interface *iface;
+	struct AdvPrefix *prefix;
+	struct AdvRoute *route;
+	struct AdvRDNSS *rdnss;
+	struct AdvDNSSL *dnssl;
 };
-
+static void cleanup(struct yydata * yydata);
+#define ABORT	do { cleanup(yydata); YYABORT; } while (0);
 #define YYLEX_PARAM yydata->scaninfo
 %}
 
@@ -175,36 +172,37 @@ ifacedef	: ifacehead '{' ifaceparams  '}' ';'
 		{
 			struct Interface *iface2;
 
-			iface2 = IfaceList;
+			iface2 = yydata->IfaceList;
 			while (iface2)
 			{
-				if (!strcmp(iface2->Name, iface->Name))
+				if (!strcmp(iface2->Name, yydata->iface->Name))
 				{
+					/* TODO: print the locations of the duplicates. */
 					flog(LOG_ERR, "duplicate interface "
-						"definition for %s", iface->Name);
+						"definition for %s", yydata->iface->Name);
 					ABORT;
 				}
 				iface2 = iface2->next;
 			}
 
-			iface->next = IfaceList;
-			IfaceList = iface;
-
-			iface = NULL;
+			yydata->iface->next = yydata->IfaceList;
+			yydata->IfaceList = yydata->iface;
+			yydata->iface = NULL;
+			++yydata->interface_count;
 		};
 
 ifacehead	: T_INTERFACE name
 		{
-			iface = malloc(sizeof(struct Interface));
+			yydata->iface = malloc(sizeof(struct Interface));
 
-			if (iface == NULL) {
+			if (yydata->iface == NULL) {
 				flog(LOG_CRIT, "malloc failed: %s", strerror(errno));
 				ABORT;
 			}
 
-			iface_init_defaults(iface);
-			strncpy(iface->Name, $2, IFNAMSIZ-1);
-			iface->Name[IFNAMSIZ-1] = '\0';
+			iface_init_defaults(yydata->iface);
+			strncpy(yydata->iface->Name, $2, IFNAMSIZ-1);
+			yydata->iface->Name[IFNAMSIZ-1] = '\0';
 		}
 		;
 
@@ -230,99 +228,99 @@ ifaceparam 	: ifaceval
 
 ifaceval	: T_MinRtrAdvInterval NUMBER ';'
 		{
-			iface->MinRtrAdvInterval = $2;
+			yydata->iface->MinRtrAdvInterval = $2;
 		}
 		| T_MaxRtrAdvInterval NUMBER ';'
 		{
-			iface->MaxRtrAdvInterval = $2;
+			yydata->iface->MaxRtrAdvInterval = $2;
 		}
 		| T_MinDelayBetweenRAs NUMBER ';'
 		{
-			iface->MinDelayBetweenRAs = $2;
+			yydata->iface->MinDelayBetweenRAs = $2;
 		}
 		| T_MinRtrAdvInterval DECIMAL ';'
 		{
-			iface->MinRtrAdvInterval = $2;
+			yydata->iface->MinRtrAdvInterval = $2;
 		}
 		| T_MaxRtrAdvInterval DECIMAL ';'
 		{
-			iface->MaxRtrAdvInterval = $2;
+			yydata->iface->MaxRtrAdvInterval = $2;
 		}
 		| T_MinDelayBetweenRAs DECIMAL ';'
 		{
-			iface->MinDelayBetweenRAs = $2;
+			yydata->iface->MinDelayBetweenRAs = $2;
 		}
 		| T_IgnoreIfMissing SWITCH ';'
 		{
-			iface->IgnoreIfMissing = $2;
+			yydata->iface->IgnoreIfMissing = $2;
 		}
 		| T_AdvSendAdvert SWITCH ';'
 		{
-			iface->AdvSendAdvert = $2;
+			yydata->iface->AdvSendAdvert = $2;
 		}
 		| T_AdvManagedFlag SWITCH ';'
 		{
-			iface->AdvManagedFlag = $2;
+			yydata->iface->AdvManagedFlag = $2;
 		}
 		| T_AdvOtherConfigFlag SWITCH ';'
 		{
-			iface->AdvOtherConfigFlag = $2;
+			yydata->iface->AdvOtherConfigFlag = $2;
 		}
 		| T_AdvLinkMTU NUMBER ';'
 		{
-			iface->AdvLinkMTU = $2;
+			yydata->iface->AdvLinkMTU = $2;
 		}
 		| T_AdvReachableTime NUMBER ';'
 		{
-			iface->AdvReachableTime = $2;
+			yydata->iface->AdvReachableTime = $2;
 		}
 		| T_AdvRetransTimer NUMBER ';'
 		{
-			iface->AdvRetransTimer = $2;
+			yydata->iface->AdvRetransTimer = $2;
 		}
 		| T_AdvDefaultLifetime NUMBER ';'
 		{
-			iface->AdvDefaultLifetime = $2;
+			yydata->iface->AdvDefaultLifetime = $2;
 		}
 		| T_AdvDefaultPreference SIGNEDNUMBER ';'
 		{
-			iface->AdvDefaultPreference = $2;
+			yydata->iface->AdvDefaultPreference = $2;
 		}
 		| T_AdvCurHopLimit NUMBER ';'
 		{
-			iface->AdvCurHopLimit = $2;
+			yydata->iface->AdvCurHopLimit = $2;
 		}
 		| T_AdvSourceLLAddress SWITCH ';'
 		{
-			iface->AdvSourceLLAddress = $2;
+			yydata->iface->AdvSourceLLAddress = $2;
 		}
 		| T_AdvIntervalOpt SWITCH ';'
 		{
-			iface->AdvIntervalOpt = $2;
+			yydata->iface->AdvIntervalOpt = $2;
 		}
 		| T_AdvHomeAgentInfo SWITCH ';'
 		{
-			iface->AdvHomeAgentInfo = $2;
+			yydata->iface->AdvHomeAgentInfo = $2;
 		}
 		| T_AdvHomeAgentFlag SWITCH ';'
 		{
-			iface->AdvHomeAgentFlag = $2;
+			yydata->iface->AdvHomeAgentFlag = $2;
 		}
 		| T_HomeAgentPreference NUMBER ';'
 		{
-			iface->HomeAgentPreference = $2;
+			yydata->iface->HomeAgentPreference = $2;
 		}
 		| T_HomeAgentLifetime NUMBER ';'
 		{
-			iface->HomeAgentLifetime = $2;
+			yydata->iface->HomeAgentLifetime = $2;
 		}
 		| T_UnicastOnly SWITCH ';'
 		{
-			iface->UnicastOnly = $2;
+			yydata->iface->UnicastOnly = $2;
 		}
 		| T_AdvMobRtrSupportFlag SWITCH ';'
 		{
-			iface->AdvMobRtrSupportFlag = $2;
+			yydata->iface->AdvMobRtrSupportFlag = $2;
 		}
 		;
 
@@ -360,10 +358,10 @@ v6addrlist	: IPV6ADDR ';'
 
 prefixdef	: prefixhead optional_prefixplist ';'
 		{
-			if (prefix) {
+			if (yydata->prefix) {
 				unsigned int dst;
 
-				if (prefix->AdvPreferredLifetime > prefix->AdvValidLifetime)
+				if (yydata->prefix->AdvPreferredLifetime > yydata->prefix->AdvValidLifetime)
 				{
 					flog(LOG_ERR, "AdvValidLifeTime must be "
 						"greater than AdvPreferredLifetime in %s, line %d",
@@ -371,35 +369,35 @@ prefixdef	: prefixhead optional_prefixplist ';'
 					ABORT;
 				}
 
-				if ( prefix->if6[0] && prefix->if6to4[0]) {
+				if ( yydata->prefix->if6[0] && yydata->prefix->if6to4[0]) {
 					flog(LOG_ERR, "Base6Interface and Base6to4Interface are mutually exclusive at this time.");
 					ABORT;
 				}
 
-				if ( prefix->if6to4[0] )
+				if ( yydata->prefix->if6to4[0] )
 				{
-					if (get_v4addr(prefix->if6to4, &dst) < 0)
+					if (get_v4addr(yydata->prefix->if6to4, &dst) < 0)
 					{
-						flog(LOG_ERR, "interface %s has no IPv4 addresses, disabling 6to4 prefix", prefix->if6to4 );
-						prefix->enabled = 0;
+						flog(LOG_ERR, "interface %s has no IPv4 addresses, disabling 6to4 prefix", yydata->prefix->if6to4 );
+						yydata->prefix->enabled = 0;
 					}
 					else
 					{
-						*((uint16_t *)(prefix->Prefix.s6_addr)) = htons(0x2002);
-						memcpy( prefix->Prefix.s6_addr + 2, &dst, sizeof( dst ) );
+						*((uint16_t *)(yydata->prefix->Prefix.s6_addr)) = htons(0x2002);
+						memcpy( yydata->prefix->Prefix.s6_addr + 2, &dst, sizeof( dst ) );
 					}
 				}
 
-				if ( prefix->if6[0] )
+				if ( yydata->prefix->if6[0] )
 				{
 #ifndef HAVE_IFADDRS_H
 					flog(LOG_ERR, "Base6Interface not supported in %s, line %d", yydata->filename, @1.first_line);
 					ABORT;
 #else
 					struct ifaddrs *ifap = 0, *ifa = 0;
-					struct AdvPrefix *next = prefix->next;
+					struct AdvPrefix *next = yydata->prefix->next;
 
-					if (prefix->PrefixLen != 64) {
+					if (yydata->prefix->PrefixLen != 64) {
 						flog(LOG_ERR, "Only /64 is allowed with Base6Interface.  %s:%d", yydata->filename, @1.first_line);
 						ABORT;
 					}
@@ -414,7 +412,7 @@ prefixdef	: prefixhead optional_prefixplist ';'
 						char buf[INET6_ADDRSTRLEN];
 						int i;
 
-						if (strncmp(ifa->ifa_name, prefix->if6, IFNAMSIZ))
+						if (strncmp(ifa->ifa_name, yydata->prefix->if6, IFNAMSIZ))
 							continue;
 
 						if (ifa->ifa_addr->sa_family != AF_INET6)
@@ -427,19 +425,19 @@ prefixdef	: prefixhead optional_prefixplist ';'
 
 						base6prefix = get_prefix6(&s6->sin6_addr, &mask->sin6_addr);
 						for (i = 0; i < 8; ++i) {
-							prefix->Prefix.s6_addr[i] &= ~mask->sin6_addr.s6_addr[i];
-							prefix->Prefix.s6_addr[i] |= base6prefix.s6_addr[i];
+							yydata->prefix->Prefix.s6_addr[i] &= ~mask->sin6_addr.s6_addr[i];
+							yydata->prefix->Prefix.s6_addr[i] |= base6prefix.s6_addr[i];
 						}
-						memset(&prefix->Prefix.s6_addr[8], 0, 8);
-						prefix->AdvRouterAddr = 1;
-						prefix->AutoSelected = 1;
-						prefix->next = next;
+						memset(&yydata->prefix->Prefix.s6_addr[8], 0, 8);
+						yydata->prefix->AdvRouterAddr = 1;
+						yydata->prefix->AutoSelected = 1;
+						yydata->prefix->next = next;
 
-						if (inet_ntop(ifa->ifa_addr->sa_family, (void *)&(prefix->Prefix), buf, sizeof(buf)) == NULL)
+						if (inet_ntop(ifa->ifa_addr->sa_family, (void *)&(yydata->prefix->Prefix), buf, sizeof(buf)) == NULL)
 							flog(LOG_ERR, "%s: inet_ntop failed in %s, line %d!", ifa->ifa_name, yydata->filename, @1.first_line);
 						else
 							dlog(LOG_DEBUG, 3, "auto-selected prefix %s/%d on interface %s from interface %s",
-								buf, prefix->PrefixLen, iface->Name, ifa->ifa_name);
+								buf, yydata->prefix->PrefixLen, yydata->iface->Name, ifa->ifa_name);
 
 						/* Taking only one prefix from the Base6Interface.  Taking more than one would require allocating new
 						   prefixes and building a list.  I'm not sure how to do that from here. So for now, break. */
@@ -451,8 +449,8 @@ prefixdef	: prefixhead optional_prefixplist ';'
 #endif /* ifndef HAVE_IFADDRS_H */
 				}
 			}
-			$$ = prefix;
-			prefix = NULL;
+			$$ = yydata->prefix;
+			yydata->prefix = NULL;
 		}
 		;
 
@@ -467,7 +465,7 @@ prefixhead	: T_PREFIX IPV6ADDR '/' NUMBER
 				ABORT;
 #else
 				struct ifaddrs *ifap = 0, *ifa = 0;
-				struct AdvPrefix *next = iface->AdvPrefixList;
+				struct AdvPrefix *next = yydata->iface->AdvPrefixList;
 
 				while (next) {
 					if (next->AutoSelected) {
@@ -488,7 +486,7 @@ prefixhead	: T_PREFIX IPV6ADDR '/' NUMBER
 					struct sockaddr_in6 *mask = (struct sockaddr_in6 *)ifa->ifa_netmask;
 					char buf[INET6_ADDRSTRLEN];
 
-					if (strncmp(ifa->ifa_name, iface->Name, IFNAMSIZ))
+					if (strncmp(ifa->ifa_name, yydata->iface->Name, IFNAMSIZ))
 						continue;
 
 					if (ifa->ifa_addr->sa_family != AF_INET6)
@@ -499,31 +497,31 @@ prefixhead	: T_PREFIX IPV6ADDR '/' NUMBER
 					if (IN6_IS_ADDR_LINKLOCAL(&s6->sin6_addr))
 						continue;
 
-					prefix = malloc(sizeof(struct AdvPrefix));
+					yydata->prefix = malloc(sizeof(struct AdvPrefix));
 
-					if (prefix == NULL) {
+					if (yydata->prefix == NULL) {
 						flog(LOG_CRIT, "malloc failed: %s", strerror(errno));
 						ABORT;
 					}
 
-					prefix_init_defaults(prefix);
-					prefix->Prefix = get_prefix6(&s6->sin6_addr, &mask->sin6_addr);
-					prefix->AdvRouterAddr = 1;
-					prefix->AutoSelected = 1;
-					prefix->next = next;
-					next = prefix;
+					prefix_init_defaults(yydata->prefix);
+					yydata->prefix->Prefix = get_prefix6(&s6->sin6_addr, &mask->sin6_addr);
+					yydata->prefix->AdvRouterAddr = 1;
+					yydata->prefix->AutoSelected = 1;
+					yydata->prefix->next = next;
+					next = yydata->prefix;
 
-					if (prefix->PrefixLen == 0)
-						prefix->PrefixLen = count_mask(mask);
+					if (yydata->prefix->PrefixLen == 0)
+						yydata->prefix->PrefixLen = count_mask(mask);
 
-					if (inet_ntop(ifa->ifa_addr->sa_family, (void *)&(prefix->Prefix), buf, sizeof(buf)) == NULL)
+					if (inet_ntop(ifa->ifa_addr->sa_family, (void *)&(yydata->prefix->Prefix), buf, sizeof(buf)) == NULL)
 						flog(LOG_ERR, "%s: inet_ntop failed in %s, line %d!", ifa->ifa_name, yydata->filename, @1.first_line);
 					else
-						dlog(LOG_DEBUG, 3, "auto-selected prefix %s/%d on interface %s", buf, prefix->PrefixLen, ifa->ifa_name);
+						dlog(LOG_DEBUG, 3, "auto-selected prefix %s/%d on interface %s", buf, yydata->prefix->PrefixLen, ifa->ifa_name);
 				}
 
-				if (!prefix) {
-					flog(LOG_WARNING, "no auto-selected prefix on interface %s, disabling advertisements",  iface->Name);
+				if (!yydata->prefix) {
+					flog(LOG_WARNING, "no auto-selected prefix on interface %s, disabling advertisements",  yydata->iface->Name);
 				}
 
 				if (ifap)
@@ -531,14 +529,14 @@ prefixhead	: T_PREFIX IPV6ADDR '/' NUMBER
 #endif /* ifndef HAVE_IFADDRS_H */
 			}
 			else {
-				prefix = malloc(sizeof(struct AdvPrefix));
+				yydata->prefix = malloc(sizeof(struct AdvPrefix));
 
-				if (prefix == NULL) {
+				if (yydata->prefix == NULL) {
 					flog(LOG_CRIT, "malloc failed: %s", strerror(errno));
 					ABORT;
 				}
 
-				prefix_init_defaults(prefix);
+				prefix_init_defaults(yydata->prefix);
 
 				if ($4 > MAX_PrefixLen)
 				{
@@ -546,9 +544,9 @@ prefixhead	: T_PREFIX IPV6ADDR '/' NUMBER
 					ABORT;
 				}
 
-				prefix->PrefixLen = $4;
+				yydata->prefix->PrefixLen = $4;
 
-				memcpy(&prefix->Prefix, $2, sizeof(struct in6_addr));
+				memcpy(&yydata->prefix->Prefix, $2, sizeof(struct in6_addr));
 			}
 		}
 		;
@@ -564,46 +562,46 @@ prefixplist	: prefixplist prefixparms
 
 prefixparms	: T_AdvOnLink SWITCH ';'
 		{
-			if (prefix) {
-				if (prefix->AutoSelected) {
-					struct AdvPrefix *p = prefix;
+			if (yydata->prefix) {
+				if (yydata->prefix->AutoSelected) {
+					struct AdvPrefix *p = yydata->prefix;
 					do {
 						p->AdvOnLinkFlag = $2;
 						p = p->next;
 					} while (p && p->AutoSelected);
 				}
 				else
-					prefix->AdvOnLinkFlag = $2;
+					yydata->prefix->AdvOnLinkFlag = $2;
 			}
 		}
 		| T_AdvAutonomous SWITCH ';'
 		{
-			if (prefix) {
-				if (prefix->AutoSelected) {
-					struct AdvPrefix *p = prefix;
+			if (yydata->prefix) {
+				if (yydata->prefix->AutoSelected) {
+					struct AdvPrefix *p = yydata->prefix;
 					do {
 						p->AdvAutonomousFlag = $2;
 						p = p->next;
 					} while (p && p->AutoSelected);
 				}
 				else
-					prefix->AdvAutonomousFlag = $2;
+					yydata->prefix->AdvAutonomousFlag = $2;
 			}
 		}
 		| T_AdvRouterAddr SWITCH ';'
 		{
-			if (prefix) {
-				if (prefix->AutoSelected && $2 == 0)
+			if (yydata->prefix) {
+				if (yydata->prefix->AutoSelected && $2 == 0)
 					flog(LOG_WARNING, "prefix automatically selected, AdvRouterAddr always enabled, ignoring config line %d", @1.first_line);
 				else
-					prefix->AdvRouterAddr = $2;
+					yydata->prefix->AdvRouterAddr = $2;
 			}
 		}
 		| T_AdvValidLifetime number_or_infinity ';'
 		{
-			if (prefix) {
-				if (prefix->AutoSelected) {
-					struct AdvPrefix *p = prefix;
+			if (yydata->prefix) {
+				if (yydata->prefix->AutoSelected) {
+					struct AdvPrefix *p = yydata->prefix;
 					do {
 						p->AdvValidLifetime = $2;
 						p->curr_validlft = $2;
@@ -611,15 +609,15 @@ prefixparms	: T_AdvOnLink SWITCH ';'
 					} while (p && p->AutoSelected);
 				}
 				else
-					prefix->AdvValidLifetime = $2;
-					prefix->curr_validlft = $2;
+					yydata->prefix->AdvValidLifetime = $2;
+					yydata->prefix->curr_validlft = $2;
 			}
 		}
 		| T_AdvPreferredLifetime number_or_infinity ';'
 		{
-			if (prefix) {
-				if (prefix->AutoSelected) {
-					struct AdvPrefix *p = prefix;
+			if (yydata->prefix) {
+				if (yydata->prefix->AutoSelected) {
+					struct AdvPrefix *p = yydata->prefix;
 					do {
 						p->AdvPreferredLifetime = $2;
 						p->curr_preferredlft = $2;
@@ -627,63 +625,63 @@ prefixparms	: T_AdvOnLink SWITCH ';'
 					} while (p && p->AutoSelected);
 				}
 				else
-					prefix->AdvPreferredLifetime = $2;
-					prefix->curr_preferredlft = $2;
+					yydata->prefix->AdvPreferredLifetime = $2;
+					yydata->prefix->curr_preferredlft = $2;
 			}
 		}
 		| T_DeprecatePrefix SWITCH ';'
 		{
-			prefix->DeprecatePrefixFlag = $2;
+			yydata->prefix->DeprecatePrefixFlag = $2;
 		}
 		| T_DecrementLifetimes SWITCH ';'
 		{
-			prefix->DecrementLifetimesFlag = $2;
+			yydata->prefix->DecrementLifetimesFlag = $2;
 		}
 		| T_Base6Interface name ';'
 		{
-			if (prefix) {
-				if (prefix->AutoSelected) {
+			if (yydata->prefix) {
+				if (yydata->prefix->AutoSelected) {
 					flog(LOG_ERR, "automatically selecting the prefix and Base6Interface are mutually exclusive");
 					ABORT;
 				} /* fallthrough */
-				dlog(LOG_DEBUG, 4, "using prefixes on interface %s for prefixes on interface %s", $2, iface->Name);
-				strncpy(prefix->if6, $2, IFNAMSIZ-1);
-				prefix->if6[IFNAMSIZ-1] = '\0';
+				dlog(LOG_DEBUG, 4, "using prefixes on interface %s for prefixes on interface %s", $2, yydata->iface->Name);
+				strncpy(yydata->prefix->if6, $2, IFNAMSIZ-1);
+				yydata->prefix->if6[IFNAMSIZ-1] = '\0';
 			}
 		}
 
 		| T_Base6to4Interface name ';'
 		{
-			if (prefix) {
-				if (prefix->AutoSelected) {
+			if (yydata->prefix) {
+				if (yydata->prefix->AutoSelected) {
 					flog(LOG_ERR, "automatically selecting the prefix and Base6to4Interface are mutually exclusive");
 					ABORT;
 				} /* fallthrough */
-				dlog(LOG_DEBUG, 4, "using interface %s for 6to4 prefixes on interface %s", $2, iface->Name);
-				strncpy(prefix->if6to4, $2, IFNAMSIZ-1);
-				prefix->if6to4[IFNAMSIZ-1] = '\0';
+				dlog(LOG_DEBUG, 4, "using interface %s for 6to4 prefixes on interface %s", $2, yydata->iface->Name);
+				strncpy(yydata->prefix->if6to4, $2, IFNAMSIZ-1);
+				yydata->prefix->if6to4[IFNAMSIZ-1] = '\0';
 			}
 		}
 		;
 
 routedef	: routehead '{' optional_routeplist '}' ';'
 		{
-			$$ = route;
-			route = NULL;
+			$$ = yydata->route;
+			yydata->route = NULL;
 		}
 		;
 
 
 routehead	: T_ROUTE IPV6ADDR '/' NUMBER
 		{
-			route = malloc(sizeof(struct AdvRoute));
+			yydata->route = malloc(sizeof(struct AdvRoute));
 
-			if (route == NULL) {
+			if (yydata->route == NULL) {
 				flog(LOG_CRIT, "malloc failed: %s", strerror(errno));
 				ABORT;
 			}
 
-			route_init_defaults(route, iface);
+			route_init_defaults(yydata->route, yydata->iface);
 
 			if ($4 > MAX_PrefixLen)
 			{
@@ -691,9 +689,9 @@ routehead	: T_ROUTE IPV6ADDR '/' NUMBER
 				ABORT;
 			}
 
-			route->PrefixLen = $4;
+			yydata->route->PrefixLen = $4;
 
-			memcpy(&route->Prefix, $2, sizeof(struct in6_addr));
+			memcpy(&yydata->route->Prefix, $2, sizeof(struct in6_addr));
 		}
 		;
 
@@ -709,22 +707,22 @@ routeplist	: routeplist routeparms
 
 routeparms	: T_AdvRoutePreference SIGNEDNUMBER ';'
 		{
-			route->AdvRoutePreference = $2;
+			yydata->route->AdvRoutePreference = $2;
 		}
 		| T_AdvRouteLifetime number_or_infinity ';'
 		{
-			route->AdvRouteLifetime = $2;
+			yydata->route->AdvRouteLifetime = $2;
 		}
 		| T_RemoveRoute SWITCH ';'
 		{
-			route->RemoveRouteFlag = $2;
+			yydata->route->RemoveRouteFlag = $2;
 		}
 		;
 
 rdnssdef	: rdnsshead '{' optional_rdnssplist '}' ';'
 		{
-			$$ = rdnss;
-			rdnss = NULL;
+			$$ = yydata->rdnss;
+			yydata->rdnss = NULL;
 		}
 		;
 
@@ -734,30 +732,30 @@ rdnssaddrs	: rdnssaddrs rdnssaddr
 
 rdnssaddr	: IPV6ADDR
 		{
-			if (!rdnss) {
+			if (!yydata->rdnss) {
 				/* first IP found */
-				rdnss = malloc(sizeof(struct AdvRDNSS));
+				yydata->rdnss = malloc(sizeof(struct AdvRDNSS));
 
-				if (rdnss == NULL) {
+				if (yydata->rdnss == NULL) {
 					flog(LOG_CRIT, "malloc failed: %s", strerror(errno));
 					ABORT;
 				}
 
-				rdnss_init_defaults(rdnss, iface);
+				rdnss_init_defaults(yydata->rdnss, yydata->iface);
 			}
 
-			switch (rdnss->AdvRDNSSNumber) {
+			switch (yydata->rdnss->AdvRDNSSNumber) {
 				case 0:
-					memcpy(&rdnss->AdvRDNSSAddr1, $1, sizeof(struct in6_addr));
-					rdnss->AdvRDNSSNumber++;
+					memcpy(&yydata->rdnss->AdvRDNSSAddr1, $1, sizeof(struct in6_addr));
+					yydata->rdnss->AdvRDNSSNumber++;
 					break;
 				case 1:
-					memcpy(&rdnss->AdvRDNSSAddr2, $1, sizeof(struct in6_addr));
-					rdnss->AdvRDNSSNumber++;
+					memcpy(&yydata->rdnss->AdvRDNSSAddr2, $1, sizeof(struct in6_addr));
+					yydata->rdnss->AdvRDNSSNumber++;
 					break;
 				case 2:
-					memcpy(&rdnss->AdvRDNSSAddr3, $1, sizeof(struct in6_addr));
-					rdnss->AdvRDNSSNumber++;
+					memcpy(&yydata->rdnss->AdvRDNSSAddr3, $1, sizeof(struct in6_addr));
+					yydata->rdnss->AdvRDNSSNumber++;
 					break;
 				default:
 					flog(LOG_CRIT, "Too many addresses in RDNSS section");
@@ -769,7 +767,7 @@ rdnssaddr	: IPV6ADDR
 
 rdnsshead	: T_RDNSS rdnssaddrs
 		{
-			if (!rdnss) {
+			if (!yydata->rdnss) {
 				flog(LOG_CRIT, "No address specified in RDNSS section");
 				ABORT;
 			}
@@ -795,25 +793,25 @@ rdnssparms	: T_AdvRDNSSPreference NUMBER ';'
 		}
 		| T_AdvRDNSSLifetime number_or_infinity ';'
 		{
-			if ($2 < iface->MaxRtrAdvInterval && $2 != 0) {
+			if ($2 < yydata->iface->MaxRtrAdvInterval && $2 != 0) {
 				flog(LOG_ERR, "AdvRDNSSLifetime must be at least MaxRtrAdvInterval");
 				ABORT;
 			}
-			if ($2 > 2*(iface->MaxRtrAdvInterval))
+			if ($2 > 2*(yydata->iface->MaxRtrAdvInterval))
 				flog(LOG_WARNING, "Warning: AdvRDNSSLifetime <= 2*MaxRtrAdvInterval would allow stale DNS servers to be deleted faster");
 
-			rdnss->AdvRDNSSLifetime = $2;
+			yydata->rdnss->AdvRDNSSLifetime = $2;
 		}
 		| T_FlushRDNSS SWITCH ';'
 		{
-			rdnss->FlushRDNSSFlag = $2;
+			yydata->rdnss->FlushRDNSSFlag = $2;
 		}
 		;
 
 dnssldef	: dnsslhead '{' optional_dnsslplist '}' ';'
 		{
-			$$ = dnssl;
-			dnssl = NULL;
+			$$ = yydata->dnssl;
+			yydata->dnssl = NULL;
 		}
 		;
 
@@ -838,34 +836,34 @@ dnsslsuffix	: STRING
 				ABORT;
 			}
 
-			if (!dnssl) {
+			if (!yydata->dnssl) {
 				/* first domain found */
-				dnssl = malloc(sizeof(struct AdvDNSSL));
+				yydata->dnssl = malloc(sizeof(struct AdvDNSSL));
 
-				if (dnssl == NULL) {
+				if (yydata->dnssl == NULL) {
 					flog(LOG_CRIT, "malloc failed: %s", strerror(errno));
 					ABORT;
 				}
 
-				dnssl_init_defaults(dnssl, iface);
+				dnssl_init_defaults(yydata->dnssl, yydata->iface);
 			}
 
-			dnssl->AdvDNSSLNumber++;
-			dnssl->AdvDNSSLSuffixes =
-				realloc(dnssl->AdvDNSSLSuffixes,
-					dnssl->AdvDNSSLNumber * sizeof(char*));
-			if (dnssl->AdvDNSSLSuffixes == NULL) {
+			yydata->dnssl->AdvDNSSLNumber++;
+			yydata->dnssl->AdvDNSSLSuffixes =
+				realloc(yydata->dnssl->AdvDNSSLSuffixes,
+					yydata->dnssl->AdvDNSSLNumber * sizeof(char*));
+			if (yydata->dnssl->AdvDNSSLSuffixes == NULL) {
 				flog(LOG_CRIT, "realloc failed: %s", strerror(errno));
 				ABORT;
 			}
 
-			dnssl->AdvDNSSLSuffixes[dnssl->AdvDNSSLNumber - 1] = strdup($1);
+			yydata->dnssl->AdvDNSSLSuffixes[yydata->dnssl->AdvDNSSLNumber - 1] = strdup($1);
 		}
 		;
 
 dnsslhead	: T_DNSSL dnsslsuffixes
 		{
-			if (!dnssl) {
+			if (!yydata->dnssl) {
 				flog(LOG_CRIT, "No domain specified in DNSSL section");
 				ABORT;
 			}
@@ -883,18 +881,18 @@ dnsslplist	: dnsslplist dnsslparms
 
 dnsslparms	: T_AdvDNSSLLifetime number_or_infinity ';'
 		{
-			if ($2 < iface->MaxRtrAdvInterval && $2 != 0) {
+			if ($2 < yydata->iface->MaxRtrAdvInterval && $2 != 0) {
 				flog(LOG_ERR, "AdvDNSSLLifetime must be at least MaxRtrAdvInterval");
 				ABORT;
 			}
-			if ($2 > 2*(iface->MaxRtrAdvInterval))
+			if ($2 > 2*(yydata->iface->MaxRtrAdvInterval))
 				flog(LOG_WARNING, "Warning: AdvDNSSLLifetime <= 2*MaxRtrAdvInterval would allow stale DNS suffixes to be deleted faster");
 
-			dnssl->AdvDNSSLLifetime = $2;
+			yydata->dnssl->AdvDNSSLLifetime = $2;
 		}
 		| T_FlushDNSSL SWITCH ';'
 		{
-			dnssl->FlushDNSSLFlag = $2;
+			yydata->dnssl->FlushDNSSLFlag = $2;
 		}
 		;
 
@@ -948,31 +946,36 @@ struct in6_addr get_prefix6(struct in6_addr const *addr, struct in6_addr const *
 	return prefix;
 }
 
-static
-void cleanup(void)
+static void cleanup(struct yydata * yydata)
 {
-	if (iface)
-		free(iface);
+	if (yydata->iface)
+		free(yydata->iface);
 
-	if (prefix)
-		free(prefix);
+	if (yydata->prefix)
+		free(yydata->prefix);
 
-	if (route)
-		free(route);
+	if (yydata->route)
+		free(yydata->route);
 
-	if (rdnss)
-		free(rdnss);
+	if (yydata->rdnss)
+		free(yydata->rdnss);
 
-	if (dnssl) {
+	if (yydata->dnssl) {
 		int i;
-		for (i = 0;i < dnssl->AdvDNSSLNumber;i++)
-			free(dnssl->AdvDNSSLSuffixes[i]);
-		free(dnssl->AdvDNSSLSuffixes);
-		free(dnssl);
+		for (i = 0;i < yydata->dnssl->AdvDNSSLNumber;i++)
+			free(yydata->dnssl->AdvDNSSLSuffixes[i]);
+		free(yydata->dnssl->AdvDNSSLSuffixes);
+		free(yydata->dnssl);
+	}
+
+	if (yydata->IfaceList) {
+		free_iface_list(yydata->IfaceList);
+		yydata->IfaceList = 0;
 	}
 }
 
-static void yyerror(void const * loc, void * vp, char const * msg)
+static
+void yyerror(void const * loc, void * vp, char const * msg)
 {
 	char * str1 = 0;
 	char * str2 = 0;
@@ -981,7 +984,7 @@ static void yyerror(void const * loc, void * vp, char const * msg)
 	YYLTYPE const * t = (YYLTYPE const*)loc;
 	struct yydata * yydata = (struct yydata *)vp;
 
-	cleanup();
+	cleanup(yydata);
 
 	rc = asprintf(&str1, "%s", msg);
 	if (rc == -1) {
@@ -1048,7 +1051,6 @@ struct interfaces * readin_config(char const *fname)
 	yylex_init(&yydata.scaninfo);
 	yyset_in(in, yydata.scaninfo);
 
-	IfaceList = 0;
 	if (yyparse(&yydata) != 0) {
 		flog(LOG_ERR, "error parsing or activating the config file: %s", fname);
 	}
