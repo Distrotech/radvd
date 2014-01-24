@@ -546,6 +546,27 @@ int setup_iface(int sock, struct Interface *iface)
 	if (check_device(sock, iface) < 0)
 		return -1;
 
+	int rc = update_device_index(iface);
+	switch (rc) {
+	case 1:
+		/* the iface index changed */
+	break;
+
+	case 2:
+		/* the iface index failed */
+		return -1;
+	break;
+
+	case 3:
+		/* the iface index changed and failed */
+		return -1;
+	break;
+
+	default:
+		/* Nothing changed and nothing failed. */
+	break;
+	}
+
 	/* Set iface->if_index, iface->max_mtu and iface hardware address */
 	if (update_device_info(sock, iface) < 0)
 		return -1;
