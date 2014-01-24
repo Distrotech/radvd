@@ -21,7 +21,7 @@ static void process_rs(int sock, struct Interface *, unsigned char *msg, int len
 static void process_ra(struct Interface *, unsigned char *msg, int len, struct sockaddr_in6 *);
 static int addr_match(struct in6_addr *a1, struct in6_addr *a2, int prefixlen);
 
-void process(int sock, struct Interface *IfaceList, unsigned char *msg, int len, struct sockaddr_in6 *addr, struct in6_pktinfo *pkt_info, int hoplimit)
+void process(int sock, struct interfaces *interfaces, unsigned char *msg, int len, struct sockaddr_in6 *addr, struct in6_pktinfo *pkt_info, int hoplimit)
 {
 	struct Interface *iface;
 	struct icmp6_hdr *icmph;
@@ -87,7 +87,7 @@ void process(int sock, struct Interface *IfaceList, unsigned char *msg, int len,
 	}
 
 	/* get iface by received if_index */
-	iface = find_iface_by_index(IfaceList, pkt_info->ipi6_ifindex);
+	iface = find_iface_by_index(interfaces, pkt_info->ipi6_ifindex);
 
 	if (iface == NULL) {
 		return;

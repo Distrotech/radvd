@@ -1016,8 +1016,22 @@ static void yyerror(void const * loc, void * vp, char const * msg)
 	}
 }
 
-struct Interface * readin_config(char const *fname)
+struct fill_by_indexer {
+	struct Interface ** array;
+	int index;
+	unsigned int * flags;
+};
+
+void fill_by_index(struct Interface * iface, void * data)
 {
+	struct fill_by_indexer * fbi = (struct fill_by_indexer *)data;
+	fbi->array[fbi->index++] = iface;
+	iface->flags = fbi->flags;
+}
+
+struct interfaces * readin_config(char const *fname)
+{
+	struct interfaces * interfaces = 0;
 	struct yydata yydata;
 	FILE * in;
 
@@ -1029,6 +1043,7 @@ struct Interface * readin_config(char const *fname)
 		return 0;
 	}
 
+	memset(&yydata, 0, sizeof(yydata));
 	yydata.filename = fname;
 	yylex_init(&yydata.scaninfo);
 	yyset_in(in, yydata.scaninfo);
@@ -1039,12 +1054,33 @@ struct Interface * readin_config(char const *fname)
 	}
 	else {
 		dlog(LOG_DEBUG, 1, "config file syntax ok.");
+
+		if (yydata.IfaceList) {
+			interfaces = malloc(sizeof(struct interfaces));
+			if (!interfaces) {
+				flog(LOG_ERR, "Unable to allocate memory for %d interfaces", yydata.interface_count);
+				exit(1);
+			}
+			memset(interfaces, 0, sizeof(struct interfaces));
+			interfaces->IfaceList = yydata.IfaceList;
+			interfaces->by_index = malloc(yydata.interface_count * sizeof(struct Interface*));
+			if (!interfaces->by_index) {
+				flog(LOG_ERR, "Unable to allocate memory for %d interfaces", yydata.interface_count);
+				exit(1);
+			}
+			struct fill_by_indexer fbi = {interfaces->by_index, 0, &interfaces->flags};
+			for_each_iface(interfaces, fill_by_index, &fbi);
+			interfaces->count = yydata.interface_count;
+			interfaces->flags = 1;
+		}
+		
+		dlog(LOG_INFO, 3, "Loaded %d Interfaces", interfaces->count);
 	}
 
 	yylex_destroy(yydata.scaninfo);
 
 	fclose(in);
 
-	return IfaceList;
+	return interfaces;
 }
 

@@ -35,6 +35,7 @@ struct Interface {
 
 	struct in6_addr if_addr;
 	unsigned int if_index;
+	unsigned int *flags;
 
 	uint8_t init_racount;	/* Initial RAs */
 
@@ -173,8 +174,15 @@ struct HomeAgentInfo {
 	uint16_t lifetime;
 };
 
+struct interfaces {
+	int count;
+	struct Interface * IfaceList;
+	struct Interface ** by_index;
+	unsigned int flags;
+};
+
 /* gram.y */
-struct Interface *readin_config(char const *fname);
+struct interfaces *readin_config(char const *fname);
 
 /* radvd.c */
 int check_ip6_forwarding(void);
@@ -206,10 +214,11 @@ void route_init_defaults(struct AdvRoute *, struct Interface *);
 void rdnss_init_defaults(struct AdvRDNSS *, struct Interface *);
 void dnssl_init_defaults(struct AdvDNSSL *, struct Interface *);
 int check_iface(struct Interface *);
-struct Interface * find_iface_by_name(void * interfaces, char const * name);
+void iface_index_changed(struct Interface *iface);
 struct Interface * find_iface_by_index(void * interfaces, int index);
 struct Interface * find_iface_by_time(void * interfaces);
 void for_each_iface(void * interfaces, void (*foo)(struct Interface*, void*), void * data);
+void free_iface_list(struct Interface * iface);
 void free_ifaces(void * interfaces);
 
 /* socket.c */
@@ -221,7 +230,7 @@ int send_ra_forall(int sock, struct Interface *iface, struct in6_addr *dest);
 int really_send(int sock, struct in6_addr const *dest, unsigned int if_index, struct in6_addr if_addr, unsigned char *buff, size_t len);
 
 /* process.c */
-void process(int sock, struct Interface *, unsigned char *, int, struct sockaddr_in6 *, struct in6_pktinfo *, int);
+void process(int sock, struct interfaces *, unsigned char *, int, struct sockaddr_in6 *, struct in6_pktinfo *, int);
 
 /* recv.c */
 int recv_rs_ra(int sock, unsigned char *, struct sockaddr_in6 *, struct in6_pktinfo **, int *);

@@ -83,10 +83,10 @@ void sigterm_handler(int sig);
 void sigint_handler(int sig);
 void sigusr1_handler(int sig);
 void timer_handler(int sock, struct Interface *iface);
-void config_interfaces(struct Interface *IfaceList);
-void kickoff_adverts(int sock, struct Interface *IfaceList);
+void config_interfaces(void *interfaces);
+void kickoff_adverts(int sock, struct Interface *iface);
 void stop_advert_foo(struct Interface * iface, void * data);
-void stop_adverts(int sock, struct Interface *IfaceList);
+void stop_adverts(int sock, void *interfaces);
 void version(void);
 void usage(char const *pname);
 int drop_root_privileges(const char *);
@@ -94,15 +94,15 @@ int check_conffile_perm(const char *, const char *);
 const char *radvd_get_pidfile(void);
 int setup_iface(int sock, struct Interface *iface);
 void setup_iface_foo(struct Interface * iface, void * data);
-void setup_ifaces(int sock, struct Interface *IfaceList);
-void main_loop(int sock, struct Interface *IfaceList, char const *conf_file);
+void setup_ifaces(int sock, void *interfaces);
+void main_loop(int sock, void *interfaces, char const *conf_file);
 void reset_prefix_lifetimes_foo(struct Interface *iface, void * data);
-void reset_prefix_lifetimes(struct Interface *IfaceList);
-struct Interface *reload_config(int sock, struct Interface *IfaceList, char const *conf_file);
+void reset_prefix_lifetimes(void *interfaces);
+struct Interface *reload_config(int sock, void *interfaces, char const *conf_file);
 
 int main(int argc, char *argv[])
 {
-	struct Interface *IfaceList = NULL;
+	struct interfaces *interfaces = NULL;
 	int sock = -1;
 	int c, log_method;
 	char *logfile;
@@ -239,7 +239,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* parse config file */
-	if ((IfaceList = readin_config(conf_file)) == 0) {
+	if ((interfaces = readin_config(conf_file)) == 0) {
 		flog(LOG_ERR, "Exiting, failed to read config file.");
 		exit(1);
 	}
@@ -342,10 +342,10 @@ int main(int argc, char *argv[])
 	signal(SIGINT, sigint_handler);
 	signal(SIGUSR1, sigusr1_handler);
 
-	setup_ifaces(sock, IfaceList);
-	main_loop(sock, IfaceList, conf_file);
+	setup_ifaces(sock, interfaces);
+	main_loop(sock, interfaces, conf_file);
 	flog(LOG_INFO, "sending stop adverts");
-	stop_adverts(sock, IfaceList);
+	stop_adverts(sock, interfaces);
 	if (daemonize) {
 		flog(LOG_INFO, "removing %s", daemon_pid_file_ident);
 		daemon_pid_file_remove();
@@ -369,7 +369,7 @@ const char *radvd_get_pidfile(void) {
     return fn;
 }
 
-void main_loop(int sock, struct Interface *IfaceList, char const *conf_file)
+void main_loop(int sock, void *interfaces, char const *conf_file)
 {
 	struct pollfd fds[2];
 
@@ -390,7 +390,7 @@ void main_loop(int sock, struct Interface *IfaceList, char const *conf_file)
 		int timeout;
 		int rc;
 
-		next_iface_to_expire = find_iface_by_time(IfaceList);
+		next_iface_to_expire = find_iface_by_time(interfaces);
 		if (next_iface_to_expire) {
 			timeout = next_time_msec(next_iface_to_expire);
 		} else {
@@ -411,7 +411,7 @@ void main_loop(int sock, struct Interface *IfaceList, char const *conf_file)
 					 * whole config file here, which was overkill.  Now we're just
 					 * resetting up the ifaces.  Can we get it down to setting up
 					 * only the ifaces which have changed state? */
-					setup_ifaces(sock, IfaceList);
+					setup_ifaces(sock, interfaces);
 				}
 			}
 #endif
@@ -426,7 +426,7 @@ void main_loop(int sock, struct Interface *IfaceList, char const *conf_file)
 
 				len = recv_rs_ra(sock, msg, &rcv_addr, &pkt_info, &hoplimit);
 				if (len > 0) {
-					process(sock, IfaceList, msg, len, &rcv_addr, pkt_info, hoplimit);
+					process(sock, interfaces, msg, len, &rcv_addr, pkt_info, hoplimit);
 				}
 			}
 		} else if (rc == 0) {
@@ -448,13 +448,13 @@ void main_loop(int sock, struct Interface *IfaceList, char const *conf_file)
 
 		if (sighup_received) {
 			dlog(LOG_INFO, 3, "sig hup received.");
-			IfaceList = reload_config(sock, IfaceList, conf_file);
+			interfaces = reload_config(sock, interfaces, conf_file);
 			sighup_received = 0;
 		}
 
 		if (sigusr1_received) {
 			dlog(LOG_INFO, 3, "sig usr1 received.");
-			reset_prefix_lifetimes(IfaceList);
+			reset_prefix_lifetimes(interfaces);
 			sigusr1_received = 0;
 		}
 
@@ -530,12 +530,12 @@ void stop_advert_foo(struct Interface * iface, void * data)
 	}
 }
 
-void stop_adverts(int sock, struct Interface *IfaceList)
+void stop_adverts(int sock, void *interfaces)
 {
 	/*
 	 *      send final RA (a SHOULD in RFC4861 section 6.2.5)
 	 */
-	for_each_iface(IfaceList, stop_advert_foo, &sock);
+	for_each_iface(interfaces, stop_advert_foo, &sock);
 }
 
 int setup_iface(int sock, struct Interface *iface)
@@ -550,6 +550,7 @@ int setup_iface(int sock, struct Interface *iface)
 	switch (rc) {
 	case 1:
 		/* the iface index changed */
+		iface_index_changed(iface);/**/
 	break;
 
 	case 2:
@@ -559,6 +560,7 @@ int setup_iface(int sock, struct Interface *iface)
 
 	case 3:
 		/* the iface index changed and failed */
+		iface_index_changed(iface);/**/
 		return -1;
 	break;
 
@@ -609,9 +611,9 @@ void setup_iface_foo(struct Interface * iface, void * data)
 	kickoff_adverts(sock, iface);
 }
 
-void setup_ifaces(int sock, struct Interface *IfaceList)
+void setup_ifaces(int sock, void *interfaces)
 {
-	for_each_iface(IfaceList, setup_iface_foo, &sock);
+	for_each_iface(interfaces, setup_iface_foo, &sock);
 }
 
 int ensure_iface_setup(int sock, struct Interface *iface)
@@ -623,24 +625,24 @@ int ensure_iface_setup(int sock, struct Interface *iface)
 	return (iface->ready ? 0 : -1);
 }
 
-struct Interface *reload_config(int sock, struct Interface *IfaceList, char const *conf_file)
+struct Interface *reload_config(int sock, void *interfaces, char const *conf_file)
 {
-	free_ifaces(IfaceList);
+	free_ifaces(interfaces);
 
 	flog(LOG_INFO, "attempting to reread config file");
 
-	IfaceList = NULL;
+	interfaces = NULL;
 
 	/* reread config file */
-	if ((IfaceList = readin_config(conf_file)) == 0) {
+	if ((interfaces = readin_config(conf_file)) == 0) {
 		flog(LOG_ERR, "Exiting, failed to read config file.");
 		exit(1);
 	}
-	setup_ifaces(sock, IfaceList);
+	setup_ifaces(sock, interfaces);
 
 	flog(LOG_INFO, "resuming normal operation");
 
-	return IfaceList;
+	return interfaces;
 }
 
 void sighup_handler(int sig)
@@ -703,9 +705,9 @@ void reset_prefix_lifetimes_foo(struct Interface *iface, void * data)
 	}
 }
 
-void reset_prefix_lifetimes(struct Interface *IfaceList)
+void reset_prefix_lifetimes(void *interfaces)
 {
-	for_each_iface(IfaceList, reset_prefix_lifetimes_foo, 0);
+	for_each_iface(interfaces, reset_prefix_lifetimes_foo, 0);
 }
 
 
