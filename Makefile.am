@@ -201,6 +201,7 @@ TESTS = \
 	check/parse_error.sh \
 	check/kill_radvd_daemon.sh \
 	check/kill_radvd.sh \
+	check/dup_config.sh \
 	addrtostr
 
 check_SCRIPTS = \
@@ -210,6 +211,7 @@ check_SCRIPTS = \
 	check/simple_config.sh \
 	check/parse_error.sh \
 	check/kill_radvd_daemon.sh \
+	check/dup_config.sh \
 	check/kill_radvd.sh
 
 check_PROGRAMS = \
