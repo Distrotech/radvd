@@ -22,7 +22,24 @@ trap "ip tuntap del dev radvd0 mode tap" SIGINT SIGTERM
 ip tuntap add dev radvd0 mode tap
 ip link set radvd0 up 
 
-./radvd -m logfile -l $RADVD_LOG -d 5 -n &
+cat << EOF > $RADVD_CONF 
+
+interface radvd0 {
+     AdvSendAdvert on;
+     MinRtrAdvinterval 20;
+     MaxRtrAdvInterval 60;
+     prefix 2002:0000:0000::/64 {
+	     AdvOnLink off;
+	     AdvAutonomous on;
+	     AdvRouterAddr on; 
+	     AdvPreferredLifetime 90;
+	     AdvValidLifetime 120;
+     };
+};
+
+EOF
+
+./radvd -C $RADVD_CONF -m logfile -l $RADVD_LOG -d 5 -n &
 
 sleep 1
 
