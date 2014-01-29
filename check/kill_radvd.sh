@@ -26,7 +26,7 @@ cat << EOF > $RADVD_CONF
 
 interface radvd0 {
      AdvSendAdvert on;
-     MinRtrAdvinterval 20;
+     MinRtrAdvInterval 20;
      MaxRtrAdvInterval 60;
      prefix 2002:0000:0000::/64 {
 	     AdvOnLink off;

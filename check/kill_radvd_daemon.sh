@@ -26,7 +26,7 @@ cat << EOF > $RADVD_CONF
 
 interface radvd0 {
      AdvSendAdvert on;
-     MinRtrAdvinterval 20;
+     MinRtrAdvInterval 20;
      MaxRtrAdvInterval 60;
      prefix 2002:0000:0000::/64 {
 	     AdvOnLink off;
@@ -46,7 +46,7 @@ sleep 1
 PID1=$(cat $RADVD_LOG | trim_log | grep "radvd startup PID is " | awk '{print $NF}')
 PID2=$(cat $RADVD_LOG | trim_log | grep "radvd PID is " | awk '{print $NF}')
 PID3=$(cat $RADVD_LOG | trim_log | grep "radvd privsep PID is " | awk '{print $NF}')
-PID4=$(cat `radvd --version 2>&1 | grep "default pidfile" | awk '{print $NF}' | sed 's/"//g'`)
+PID4=$(cat `./radvd --version 2>&1 | grep "default pidfile" | awk '{print $NF}' | sed 's/"//g'`)
 
 kill $PID4 && echo "radvd killed" || echo "couldn't kill $PID4"
 
