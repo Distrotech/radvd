@@ -14,7 +14,6 @@ interface eth0 {
      AdvSendAdvert on;
      MinRtrAdvInterval 20;
      MaxRtrAdvInterval 60;
-     AdvLinkMTU 1472;
      prefix 2002:0000:0001::/64 {
              AdvOnLink off;
              AdvAutonomous on;
@@ -60,7 +59,6 @@ interface eth1 {
      AdvSendAdvert on;
      MinRtrAdvInterval 20;
      MaxRtrAdvInterval 60;
-     AdvLinkMTU 1472;
      prefix 2002:0000:0001::/64 {
              AdvOnLink off;
              AdvAutonomous on;

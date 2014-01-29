@@ -22,14 +22,31 @@ trap "ip tuntap del dev radvd0 mode tap" SIGINT SIGTERM
 ip tuntap add dev radvd0 mode tap
 ip link set radvd0 up 
 
-./radvd -m logfile -l $RADVD_LOG -d 5 &
+cat << EOF > $RADVD_CONF 
+
+interface radvd0 {
+     AdvSendAdvert on;
+     MinRtrAdvInterval 20;
+     MaxRtrAdvInterval 60;
+     prefix 2002:0000:0000::/64 {
+	     AdvOnLink off;
+	     AdvAutonomous on;
+	     AdvRouterAddr on; 
+	     AdvPreferredLifetime 90;
+	     AdvValidLifetime 120;
+     };
+};
+
+EOF
+
+./radvd -C $RADVD_CONF -m logfile -l $RADVD_LOG -d 5 &
 
 sleep 1
 
 PID1=$(cat $RADVD_LOG | trim_log | grep "radvd startup PID is " | awk '{print $NF}')
 PID2=$(cat $RADVD_LOG | trim_log | grep "radvd PID is " | awk '{print $NF}')
 PID3=$(cat $RADVD_LOG | trim_log | grep "radvd privsep PID is " | awk '{print $NF}')
-PID4=$(cat `radvd --version 2>&1 | grep "default pidfile" | awk '{print $NF}' | sed 's/"//g'`)
+PID4=$(cat `./radvd --version 2>&1 | grep "default pidfile" | awk '{print $NF}' | sed 's/"//g'`)
 
 kill $PID4 && echo "radvd killed" || echo "couldn't kill $PID4"
 
