@@ -195,6 +195,7 @@ cat << EOF
 Your build configuration:
 
 	CFLAGS = $CFLAGS
+	CPPFLAGS = $CPPFLAGS
 	LDFLAGS = $LDFLAGS
 	Arch = ${arch}
 	Extras: ${CONDITIONAL_SOURCES}

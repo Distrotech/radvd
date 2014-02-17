@@ -11,7 +11,14 @@
 #   may request it from <reubenhwk@gmail.com>.
 #
 
+
+# $(CC) $(DEFS) -I. [$(mumble_CPPFLAGS)|$(AM_CPPFLAGS)] $(CPPFLAGS) [$(mumble_CFLAGS)|$(AM_CFLAGS)] $(CFLAGS)
+# mumble_CPPFLAGS override AM_CPPFLAGS
+# CPP is C PreProcessor
+
 AUTOMAKE_OPTIONS = 1.2 foreign
+
+####  Compiler flags and such
 
 DEFS = \
 	-DINET6=1 \
@@ -20,6 +27,36 @@ DEFS = \
 	-DPATH_RADVD_LOG=\"$(PATH_RADVD_LOG)\" \
 	-DPATH_RADVD_PID=\"$(PATH_RADVD_PID)\" \
 	-DVERSION=\"$(VERSION)\"
+
+ENABLE_WARNINGS = \
+	-Wall \
+	-Wcast-align \
+	-Wcast-qual \
+	-Wmissing-declarations \
+	-Wmissing-prototypes \
+	-Wpointer-arith \
+	-Wstrict-prototypes
+
+DISABLE_WARNINGS = \
+	-Wno-strict-aliasing
+
+AM_CFLAGS = \
+	-fno-strict-aliasing \
+	-fstack-protector \
+	$(ENABLE_WARNINGS) \
+	$(DISABLE_WARNINGS)
+
+# CPP is C PreProcessor
+radvd_CPPFLAGS = \
+	@DAEMON_CFLAGS@
+
+radvd_LDADD = \
+	@CONDITIONAL_SOURCES@ \
+	@DAEMON_LIBS@
+
+AM_YFLAGS = -d
+
+### Programs and sources
 
 COMMON_SRC = \
 	defaults.h \
@@ -55,39 +92,33 @@ EXTRA_radvd_SOURCES = \
 	netlink.h \
 	privsep-linux.c
 
-radvd_CPPFLAGS = \
-	@DAEMON_CFLAGS@
-
-radvd_LDADD = \
-	@CONDITIONAL_SOURCES@ \
-	@DAEMON_LIBS@
-
-radvd_DEPENDENCIES = \
-	@CONDITIONAL_SOURCES@
-
-AM_YFLAGS = -d
-
-AM_CFLAGS = \
-	-Wall \
-	-Wcast-align \
-	-Wcast-qual \
-	-Wpointer-arith \
-	-Wmissing-declarations \
-	-Wmissing-prototypes \
-	-Wstrict-prototypes \
-	-fno-strict-aliasing
-
 radvdump_SOURCES = \
 	$(COMMON_SRC) \
 	radvdump.c
 
-indent:
-	indent -linux -l180 *.c *.h
+### man pages ###
+
+SUFFIXES = .man
+
+.man:
+	$(AM_V_GEN)$(SED) \
+		-e 's,@''VERSION''@,$(VERSION),g' \
+		-e 's,@''sbindir''@,$(sbindir),g' \
+		-e 's,@''PATH_RADVD_CONF''@,$(PATH_RADVD_CONF),g' \
+		-e 's,@''PATH_RADVD_PID''@,$(PATH_RADVD_PID),g' \
+		-e 's,@''PATH_RADVD_LOG''@,$(PATH_RADVD_LOG),g' \
+		-e 's,@''LOG_FACILITY''@,$(LOG_FACILITY),g' \
+		$< > $@
 
 man_MANS = \
 	radvd.8 \
 	radvd.conf.5 \
 	radvdump.8
+
+### build support ###
+
+indent:
+	indent -linux -l180 *.c *.h
 
 EXTRA_DIST = \
 	CHANGES \
@@ -104,19 +135,6 @@ EXTRA_DIST = \
 	redhat/radvd.spec \
 	redhat/radvd.sysconfig \
 	redhat/radvd-tmpfs.conf
-
-SUFFIXES = .man
-
-.man:
-	$(AM_V_GEN)$(SED) \
-		-e 's,@''VERSION''@,$(VERSION),g' \
-		-e 's,@''sbindir''@,$(sbindir),g' \
-		-e 's,@''PATH_RADVD_CONF''@,$(PATH_RADVD_CONF),g' \
-		-e 's,@''PATH_RADVD_PID''@,$(PATH_RADVD_PID),g' \
-		-e 's,@''PATH_RADVD_LOG''@,$(PATH_RADVD_LOG),g' \
-		-e 's,@''LOG_FACILITY''@,$(LOG_FACILITY),g' \
-		$< > $@
-
 
 EXTENSIONS = gz bz2 lz lzma xz tarZ shar zip
 HASHES = md5 sha1 sha256
@@ -170,6 +188,22 @@ dist-hook:
 	rm -f $(distdir)/gram.h
 	rm -f $(distdir)/scanner.c
 
+CLEANFILES = \
+	radvd.8 \
+	radvd.conf.5 \
+	radvdump.8 \
+	gram.c \
+	gram.h \
+	gram.dot \
+	scanner.c \
+	scanner.h \
+	gram.dot
+
+### Explicit Dependencies ###
+
+radvd_DEPENDENCIES = \
+	@CONDITIONAL_SOURCES@
+
 gram.h: gram.c
 gram.c: gram.y
 	$(AM_V_GEN) ${YACC} --defines=gram.h --graph=gram.dot --output=gram.c gram.y
@@ -181,17 +215,7 @@ scanner.c: scanner.l
 radvd-gram.o gram.o: gram.c scanner.h
 radvd-scanner.o scanner.o: scanner.c gram.h
 
-
-CLEANFILES = \
-	radvd.8 \
-	radvd.conf.5 \
-	radvdump.8 \
-	gram.c \
-	gram.h \
-	gram.dot \
-	scanner.c \
-	scanner.h \
-	gram.dot
+### Testing ###
 
 TESTS = \
 	check/multi_interface_config.sh \
