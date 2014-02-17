@@ -29,6 +29,8 @@
 
 static void user_action(void * p, int lineno, int leng, int * column);
 #define YY_USER_ACTION user_action(yylloc, yylineno, yyleng, &yycolumn);
+int yyget_column  (yyscan_t yyscanner);
+void yyset_column (int  column_no , yyscan_t yyscanner);
 %}
 
 digit		[0-9]
