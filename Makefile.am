@@ -124,7 +124,6 @@ EXTRA_DIST = \
 	CHANGES \
 	COPYRIGHT \
 	INTRO.html \
-	VERSION \
 	copyright.blurb \
 	radvd.8.man \
 	radvd.conf.5.man \
