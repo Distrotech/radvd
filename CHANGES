@@ -5,7 +5,7 @@
 		fixed problems in code raised by CFLAGS fix
 
 2014/02/01	2.0.0-alpha3
-		fixed some tests which envoked radvd instead of ./radvd
+		fixed some tests which invoked radvd instead of ./radvd
 		added an iface api which hides the linked list implementation
 		added a sorted list (by iface index) to the iface api
 		make globals in gram.y non-global
