@@ -1025,6 +1025,7 @@ struct fill_by_indexer {
 	unsigned int * flags;
 };
 
+void fill_by_index(struct Interface * iface, void * data);
 void fill_by_index(struct Interface * iface, void * data)
 {
 	struct fill_by_indexer * fbi = (struct fill_by_indexer *)data;

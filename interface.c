@@ -218,7 +218,7 @@ void iface_index_changed(struct Interface *iface)
 
 static int compare_by_index(void const *a, void const *b)
 {
-	return (*(struct Interface **)b)->if_index - (*(struct Interface **)a)->if_index;
+	return (*(struct Interface const* const*)b)->if_index - (*(struct Interface const* const*)a)->if_index;
 }
 
 struct Interface *find_iface_by_index(void *interfaces, int index)
