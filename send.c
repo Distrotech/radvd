@@ -30,8 +30,12 @@ int send_ra_forall(int sock, struct Interface *iface, struct in6_addr *dest)
 	struct Clients *current;
 
 	/* If no list of clients was specified for this interface, we broadcast */
-	if (iface->ClientList == NULL)
+	if (iface->ClientList == NULL) {
+		if (dest == NULL && iface->UnicastOnly) {
+			return 0;
+		}
 		return send_ra(sock, iface, dest);
+	}
 
 	/* If clients are configured, send the advertisement to all of them via unicast */
 	for (current = iface->ClientList; current; current = current->next) {
