@@ -42,7 +42,7 @@ int process_netlink_msg(int sock)
 	struct nlmsghdr *nh;
 	int rc = 0;
 
-	len = recvmsg(sock, &msg, 0);
+	len = radvd_recvmsg(sock, &msg, 0);
 	if (len == -1) {
 		flog(LOG_ERR, "recvmsg failed: %s", strerror(errno));
 	}

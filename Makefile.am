@@ -54,9 +54,15 @@ radvd_LDADD = \
 	@CONDITIONAL_SOURCES@ \
 	@DAEMON_LIBS@
 
+radvd_test_CPPFLAGS = $(radvd_CPPFLAGS)
+radvd_test_LDADD = $(radvd_LDADD)
+
 AM_YFLAGS = -d
 
 ### Programs and sources
+
+noinst_PROGRAMS = \
+	radvd_test
 
 COMMON_SRC = \
 	defaults.h \
@@ -73,6 +79,19 @@ sbin_PROGRAMS = \
 	radvd \
 	radvdump
 
+radvd_test_SOURCES = \
+	$(COMMON_SRC) \
+	device-common.c \
+	gram.h \
+	gram.y \
+	interface.c \
+	process.c \
+	radvd.c \
+	scanner.l \
+	send.c \
+	syscalls_test.c \
+	timer.c
+
 radvd_SOURCES = \
 	$(COMMON_SRC) \
 	device-common.c \
@@ -83,6 +102,7 @@ radvd_SOURCES = \
 	radvd.c \
 	scanner.l \
 	send.c \
+	syscalls.c \
 	timer.c
 
 EXTRA_radvd_SOURCES = \
@@ -94,6 +114,7 @@ EXTRA_radvd_SOURCES = \
 
 radvdump_SOURCES = \
 	$(COMMON_SRC) \
+	syscalls.c \
 	radvdump.c
 
 ### man pages ###
@@ -114,6 +135,7 @@ man_MANS = \
 	radvd.8 \
 	radvd.conf.5 \
 	radvdump.8
+
 
 ### build support ###
 
@@ -217,25 +239,7 @@ radvd-scanner.o scanner.o: scanner.c gram.h
 ### Testing ###
 
 TESTS = \
-	check/multi_interface_config.sh \
-	check/multi_prefix_config.sh \
-	check/rdnss_config.sh \
-	check/simple_config.sh \
-	check/parse_error.sh \
-	check/kill_radvd_daemon.sh \
-	check/kill_radvd.sh \
-	check/dup_config.sh \
 	addrtostr
-
-check_SCRIPTS = \
-	check/multi_interface_config.sh \
-	check/multi_prefix_config.sh \
-	check/rdnss_config.sh \
-	check/simple_config.sh \
-	check/parse_error.sh \
-	check/kill_radvd_daemon.sh \
-	check/dup_config.sh \
-	check/kill_radvd.sh
 
 check_PROGRAMS = \
 	addrtostr

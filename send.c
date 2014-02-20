@@ -492,7 +492,7 @@ int really_send(int sock, struct in6_addr const *dest, unsigned int if_index, st
 	mhdr.msg_control = (void *)cmsg;
 	mhdr.msg_controllen = sizeof(chdr);
 
-	err = sendmsg(sock, &mhdr, 0);
+	err = radvd_sendmsg(sock, &mhdr, 0);
 
 	return err;
 }

@@ -56,7 +56,7 @@ int recv_rs_ra(int sock, unsigned char *msg, struct sockaddr_in6 *addr, struct i
 	mhdr.msg_control = (void *)chdr;
 	mhdr.msg_controllen = chdrlen;
 
-	len = recvmsg(sock, &mhdr, 0);
+	len = radvd_recvmsg(sock, &mhdr, 0);
 
 	if (len < 0) {
 		if (errno != EINTR)
