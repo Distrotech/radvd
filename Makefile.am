@@ -246,13 +246,20 @@ radvd-scanner.o scanner.o: scanner.c gram.h
 ### Testing ###
 
 TESTS = \
-	addrtostr
+	addrtostr \
+	rand_between
 
 check_PROGRAMS = \
-	addrtostr
+	addrtostr \
+	rand_between
 
 addrtostr_SOURCES = \
 	util.c \
 	log.c \
 	check/addrtostr.c
+
+rand_between_SOURCES = \
+	util.c \
+	log.c \
+	check/rand_between.c
 
