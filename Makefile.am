@@ -117,6 +117,13 @@ radvdump_SOURCES = \
 	syscalls.c \
 	radvdump.c
 
+### coverage ###
+
+cov: check
+	gcov *.c *.h *.l *.y
+	lcov --capture --directory . --output-file coverage.info
+	genhtml coverage.info --output-directory cov
+
 ### man pages ###
 
 SUFFIXES = .man
