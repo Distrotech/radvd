@@ -47,24 +47,50 @@ AM_CFLAGS = \
 	$(DISABLE_WARNINGS)
 
 # CPP is C PreProcessor
-radvd_CPPFLAGS = \
-	@DAEMON_CFLAGS@
-
-radvd_LDADD = \
-	@CONDITIONAL_SOURCES@ \
-	@DAEMON_LIBS@
-
-radvd_test_CPPFLAGS = $(radvd_CPPFLAGS)
-radvd_test_LDADD = $(radvd_LDADD)
 
 AM_YFLAGS = -d
 
-### Programs and sources
+radvd_CPPFLAGS = \
+	@DAEMON_CFLAGS@
+
+radvd_test_CPPFLAGS = \
+	@DAEMON_CFLAGS@
+
+noinst_LIBRARIES = libradvd-parser.a
+
+radvd_test_LDADD = \
+	libradvd-parser.a \
+	@CONDITIONAL_SOURCES@ \
+	@DAEMON_LIBS@
+
+radvd_LDADD = \
+	libradvd-parser.a \
+	@CONDITIONAL_SOURCES@ \
+	@DAEMON_LIBS@
+
+### Programs and sources ###
+
+
+libradvd_parser_a_SOURCES = \
+	gram.h \
+	gram.y \
+	scanner.l
+
+sbin_PROGRAMS = \
+	radvd \
+	radvdump
 
 noinst_PROGRAMS = \
 	radvd_test
 
-COMMON_SRC = \
+EXTRA_radvd_test_SOURCES = \
+	device-bsd44.c \
+	device-linux.c \
+	netlink.c \
+	netlink.h \
+	privsep-linux.c
+
+radvd_test_SOURCES = \
 	defaults.h \
 	includes.h \
 	log.c \
@@ -73,37 +99,14 @@ COMMON_SRC = \
 	radvd.h \
 	recv.c \
 	socket.c \
-	util.c
-
-sbin_PROGRAMS = \
-	radvd \
-	radvdump
-
-radvd_test_SOURCES = \
-	$(COMMON_SRC) \
+	util.c \
 	device-common.c \
-	gram.h \
-	gram.y \
 	interface.c \
 	process.c \
 	radvd.c \
-	scanner.l \
 	send.c \
-	syscalls_test.c \
-	timer.c
-
-radvd_SOURCES = \
-	$(COMMON_SRC) \
-	device-common.c \
-	gram.h \
-	gram.y \
-	interface.c \
-	process.c \
-	radvd.c \
-	scanner.l \
-	send.c \
-	syscalls.c \
-	timer.c
+	timer.c \
+	syscalls_test.c
 
 EXTRA_radvd_SOURCES = \
 	device-bsd44.c \
@@ -112,8 +115,34 @@ EXTRA_radvd_SOURCES = \
 	netlink.h \
 	privsep-linux.c
 
+radvd_SOURCES = \
+	defaults.h \
+	includes.h \
+	log.c \
+	log.h \
+	pathnames.h \
+	radvd.h \
+	recv.c \
+	socket.c \
+	util.c \
+	device-common.c \
+	interface.c \
+	process.c \
+	radvd.c \
+	send.c \
+	timer.c \
+	syscalls.c
+
 radvdump_SOURCES = \
-	$(COMMON_SRC) \
+	defaults.h \
+	includes.h \
+	log.c \
+	log.h \
+	pathnames.h \
+	radvd.h \
+	recv.c \
+	socket.c \
+	util.c \
 	syscalls.c \
 	radvdump.c
 
@@ -230,7 +259,11 @@ CLEANFILES = \
 ### Explicit Dependencies ###
 
 radvd_DEPENDENCIES = \
-	@CONDITIONAL_SOURCES@
+	@CONDITIONAL_SOURCES@ \
+	libradvd-parser.a
+
+radvd_test_DEPENDENCIES = \
+	$(radvd_DEPENDENCIES)
 
 gram.h: gram.c
 gram.c: gram.y
