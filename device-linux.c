@@ -62,7 +62,9 @@ int update_device_info(int sock, struct Interface *iface)
 			(unsigned char)ifr.ifr_hwaddr.sa_data[0],
 			(unsigned char)ifr.ifr_hwaddr.sa_data[1],
 			(unsigned char)ifr.ifr_hwaddr.sa_data[2],
-			(unsigned char)ifr.ifr_hwaddr.sa_data[3], (unsigned char)ifr.ifr_hwaddr.sa_data[4], (unsigned char)ifr.ifr_hwaddr.sa_data[5]);
+			(unsigned char)ifr.ifr_hwaddr.sa_data[3],
+			(unsigned char)ifr.ifr_hwaddr.sa_data[4],
+			(unsigned char)ifr.ifr_hwaddr.sa_data[5]);
 		dlog(LOG_DEBUG, 3, "hardware address is %s", hwaddr);
 		break;
 
