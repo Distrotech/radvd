@@ -1,3 +1,12 @@
+addrtostr
+libradvd-parser.a
+radvd_test
+radvdion
+rand_between
+cov
+coverage.info
+*.gcda
+*.gcno
 tags
 .deps
 *.o
