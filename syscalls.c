@@ -36,3 +36,8 @@ int radvd_if_nametoindex(char const * name)
 {
 	return if_nametoindex(name);
 }
+
+int radvd_getifaddrs(struct ifaddrs **addresses)
+{
+	return getifaddrs(addresses);
+}
