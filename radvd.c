@@ -352,6 +352,7 @@ int main(int argc, char *argv[])
 	}
 
 	flog(LOG_INFO, "returning from radvd main");
+	log_close();
 	return 0;
 }
 
