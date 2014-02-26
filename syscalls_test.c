@@ -38,29 +38,37 @@ int radvd_setsockopt(int sockfd, int level, int optname,
 */
 int radvd_ioctl(int d, int request, void *p)
 {
+	struct ifreq *ifr = (struct ifreq*)p;
+
 	switch (request) {
 	case SIOCGIFMTU:{
-		struct ifreq *ifr = (struct ifreq*)p;
 		int * mtu = (int*)&ifr->ifr_mtu;
 		*mtu = 1500;
 		return 0;
 	}
 
 	case SIOCGIFFLAGS:{
-		struct ifreq *ifr = (struct ifreq*)p;
 		int * flags = (int*)&ifr->ifr_flags;
 		*flags = IFF_UP | IFF_RUNNING | IFF_MULTICAST;
 		return 0;
 	}
 
 	case SIOCGIFADDR:{
-		struct ifreq *ifr = (struct ifreq*)p;
 		struct sockaddr_in * ipaddr = (struct sockaddr_in*)&ifr->ifr_addr;
 		inet_pton(AF_INET6, "2002::", ipaddr);
 		return 0;
 	}
 
 	case SIOCGIFHWADDR:{
+		ifr->ifr_hwaddr.sa_family = ARPHRD_ETHER;
+
+		ifr->ifr_hwaddr.sa_data[0] = 0;
+		ifr->ifr_hwaddr.sa_data[1] = 0;
+		ifr->ifr_hwaddr.sa_data[2] = 0;
+		ifr->ifr_hwaddr.sa_data[3] = 0;
+		ifr->ifr_hwaddr.sa_data[4] = 0;
+		ifr->ifr_hwaddr.sa_data[5] = 0;
+
 		return 0;
 	}
 
