@@ -27,3 +27,12 @@ int radvd_setsockopt(int sockfd, int level, int optname,
 }
 
 
+int radvd_ioctl(int d, int request, void *p)
+{
+	return ioctl(d, request, p);
+}
+
+int radvd_if_nametoindex(char const * name)
+{
+	return if_nametoindex(name);
+}

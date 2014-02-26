@@ -34,8 +34,8 @@ int update_device_info(struct Interface *iface)
 	strncpy(ifr.ifr_name, iface->Name, IFNAMSIZ - 1);
 	ifr.ifr_name[IFNAMSIZ - 1] = '\0';
 
-	if (ioctl(sock, SIOCGIFMTU, &ifr) < 0) {
-		flog(LOG_ERR, "ioctl(SIOCGIFMTU) failed for %s: %s", iface->Name, strerror(errno));
+	if (radvd_ioctl(sock, SIOCGIFMTU, &ifr) < 0) {
+		flog(LOG_ERR, "radvd_ioctl(SIOCGIFMTU) failed for %s: %s", iface->Name, strerror(errno));
 		goto ret;
 	}
 

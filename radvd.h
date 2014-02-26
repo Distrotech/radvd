@@ -236,6 +236,8 @@ ssize_t radvd_sendmsg(int sockfd, const struct msghdr *msg, int flags);
 ssize_t radvd_recvmsg(int sockfd, struct msghdr *msg, int flags);
 int radvd_setsockopt(int sockfd, int level, int optname,
                       const void *optval, socklen_t optlen);
+int radvd_ioctl(int d, int request, void *p);
+int radvd_if_nametoindex(char const * name);
 
 /* process.c */
 void process(int sock, struct interfaces *, unsigned char *, int, struct sockaddr_in6 *, struct in6_pktinfo *, int);

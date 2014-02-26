@@ -24,11 +24,11 @@ int check_device(int sock, struct Interface *iface)
 	memset(&ifr, 0, sizeof(ifr));
 	strncpy(ifr.ifr_name, iface->Name, IFNAMSIZ - 1);
 
-	if (ioctl(sock, SIOCGIFFLAGS, &ifr) < 0) {
-		flog(LOG_ERR, "ioctl(SIOCGIFFLAGS) failed for %s: %s", iface->Name, strerror(errno));
+	if (radvd_ioctl(sock, SIOCGIFFLAGS, &ifr) < 0) {
+		flog(LOG_ERR, "radvd_ioctl(SIOCGIFFLAGS) failed for %s: %s", iface->Name, strerror(errno));
 		return -1;
 	} else {
-		dlog(LOG_ERR, 5, "ioctl(SIOCGIFFLAGS) succeeded for %s", iface->Name);
+		dlog(LOG_ERR, 5, "radvd_ioctl(SIOCGIFFLAGS) succeeded for %s", iface->Name);
 	}
 
 	if (!(ifr.ifr_flags & IFF_UP)) {
@@ -62,7 +62,7 @@ int get_v4addr(const char *ifn, unsigned int *dst)
 	int fd;
 
 	if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-		flog(LOG_ERR, "create socket for IPv4 ioctl failed for %s: %s", ifn, strerror(errno));
+		flog(LOG_ERR, "create socket for IPv4 radvd_ioctl failed for %s: %s", ifn, strerror(errno));
 		return -1;
 	}
 
@@ -71,8 +71,8 @@ int get_v4addr(const char *ifn, unsigned int *dst)
 	ifr.ifr_name[IFNAMSIZ - 1] = '\0';
 	ifr.ifr_addr.sa_family = AF_INET;
 
-	if (ioctl(fd, SIOCGIFADDR, &ifr) < 0) {
-		flog(LOG_ERR, "ioctl(SIOCGIFADDR) failed for %s: %s", ifn, strerror(errno));
+	if (radvd_ioctl(fd, SIOCGIFADDR, &ifr) < 0) {
+		flog(LOG_ERR, "radvd_ioctl(SIOCGIFADDR) failed for %s: %s", ifn, strerror(errno));
 		close(fd);
 		return -1;
 	}
@@ -147,7 +147,7 @@ int setup_linklocal_addr(struct Interface *iface)
 int update_device_index(struct Interface *iface)
 {
 	int retval = 0;
-	int index = if_nametoindex(iface->Name);
+	int index = radvd_if_nametoindex(iface->Name);
 	if (0 == index) {
 		/* Yes, if_nametoindex returns zero on failure.  2014/01/16 */
 		flog(LOG_ERR, "%s not found: %s", iface->Name, strerror(errno));

@@ -39,16 +39,16 @@ int update_device_info(int sock, struct Interface *iface)
 	memset(&ifr, 0, sizeof(ifr));
 	strncpy(ifr.ifr_name, iface->Name, IFNAMSIZ - 1);
 
-	if (ioctl(sock, SIOCGIFMTU, &ifr) < 0) {
-		flog(LOG_ERR, "ioctl(SIOCGIFMTU) failed for %s: %s", iface->Name, strerror(errno));
+	if (radvd_ioctl(sock, SIOCGIFMTU, &ifr) < 0) {
+		flog(LOG_ERR, "radvd_ioctl(SIOCGIFMTU) failed for %s: %s", iface->Name, strerror(errno));
 		return -1;
 	}
 
 	iface->if_maxmtu = ifr.ifr_mtu;
 	dlog(LOG_DEBUG, 3, "mtu for %s is %d", iface->Name, ifr.ifr_mtu);
 
-	if (ioctl(sock, SIOCGIFHWADDR, &ifr) < 0) {
-		flog(LOG_ERR, "ioctl(SIOCGIFHWADDR) failed for %s: %s", iface->Name, strerror(errno));
+	if (radvd_ioctl(sock, SIOCGIFHWADDR, &ifr) < 0) {
+		flog(LOG_ERR, "radvd_ioctl(SIOCGIFHWADDR) failed for %s: %s", iface->Name, strerror(errno));
 		return -1;
 	}
 
