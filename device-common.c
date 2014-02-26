@@ -99,6 +99,7 @@ int setup_linklocal_addr(struct Interface *iface)
 	if (radvd_getifaddrs(&addresses) != 0) {
 		flog(LOG_ERR, "getifaddrs failed: %s(%d)", strerror(errno), errno);
 	} else {
+		char addr_str[INET6_ADDRSTRLEN];
 		uint8_t const ll_prefix[] = { 0xfe, 0x80, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 };
 		struct ifaddrs *ifa;
 		for (ifa = addresses; ifa != NULL; ifa = ifa->ifa_next) {
@@ -121,14 +122,17 @@ int setup_linklocal_addr(struct Interface *iface)
 
 			memcpy(&iface->if_addr, &(a6->sin6_addr), sizeof(struct in6_addr));
 
-			freeifaddrs(addresses);
+			radvd_freeifaddrs(addresses);
+
+			addrtostr(&iface->if_addr, addr_str, sizeof(addr_str));
+			dlog(LOG_DEBUG, 4, "linklocal address for %s is %s", iface->Name, addr_str);
 
 			return 0;
 		}
 	}
 
 	if (addresses)
-		freeifaddrs(addresses);
+		radvd_freeifaddrs(addresses);
 
 	if (iface->IgnoreIfMissing)
 		dlog(LOG_DEBUG, 4, "no linklocal address configured for %s", iface->Name);

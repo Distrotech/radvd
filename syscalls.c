@@ -41,3 +41,8 @@ int radvd_getifaddrs(struct ifaddrs **addresses)
 {
 	return getifaddrs(addresses);
 }
+
+void radvd_freeifaddrs(struct ifaddrs *ifa)
+{
+	freeifaddrs(ifa);
+}

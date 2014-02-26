@@ -67,7 +67,7 @@ int radvd_ioctl(int d, int request, void *p)
 		ifr->ifr_hwaddr.sa_data[2] = 0;
 		ifr->ifr_hwaddr.sa_data[3] = 0;
 		ifr->ifr_hwaddr.sa_data[4] = 0;
-		ifr->ifr_hwaddr.sa_data[5] = 0;
+		ifr->ifr_hwaddr.sa_data[5] = 1;
 
 		return 0;
 	}
@@ -85,5 +85,31 @@ int radvd_if_nametoindex(char const * name)
 
 int radvd_getifaddrs(struct ifaddrs **addresses)
 {
-	return getifaddrs(addresses);
+	struct ifaddrs * ifa;
+	struct sockaddr_in6 *a6;
+
+	ifa = malloc(sizeof(struct ifaddrs));
+	memset(ifa, 0, sizeof(struct ifaddrs));
+
+	ifa->ifa_name = strdup("test1");
+	ifa->ifa_addr = malloc(sizeof(struct sockaddr));
+	memset(ifa->ifa_addr, 0, sizeof(struct sockaddr));
+	a6 = (struct sockaddr_in6 *)ifa->ifa_addr;
+	inet_pton(AF_INET6, "fe80::1234", &a6->sin6_addr);
+	ifa->ifa_addr->sa_family = AF_INET6;
+
+	*addresses = ifa;
+
+	return 0;
+}
+
+void radvd_freeifaddrs(struct ifaddrs *ifa)
+{
+	while (ifa) {
+		struct ifaddrs * ifa_next = ifa->ifa_next;
+		free(ifa->ifa_name);
+		free(ifa->ifa_addr);
+		free(ifa);
+		ifa = ifa_next;
+	}
 }
