@@ -238,8 +238,10 @@ int radvd_setsockopt(int sockfd, int level, int optname,
                       const void *optval, socklen_t optlen);
 int radvd_ioctl(int d, int request, void *p);
 int radvd_if_nametoindex(char const * name);
+char * radvd_if_indextoname(int index, char *name);
 int radvd_getifaddrs(struct ifaddrs **addresses);
 void radvd_freeifaddrs(struct ifaddrs*);
+int radvd_bind(int sock, struct sockaddr *snl, size_t size);
 
 /* process.c */
 void process(int sock, struct interfaces *, unsigned char *, int, struct sockaddr_in6 *, struct in6_pktinfo *, int);

@@ -61,7 +61,7 @@ int process_netlink_msg(int sock)
 		/* Continue with parsing payload. */
 		if (nh->nlmsg_type == RTM_NEWLINK || nh->nlmsg_type == RTM_DELLINK || nh->nlmsg_type == RTM_SETLINK) {
 			struct ifinfomsg *ifinfo = (struct ifinfomsg *)NLMSG_DATA(nh);
-			const char *ifname = if_indextoname(ifinfo->ifi_index, ifnamebuf);
+			const char *ifname = radvd_if_indextoname(ifinfo->ifi_index, ifnamebuf);
 
 			struct rtattr *rta = IFLA_RTA(NLMSG_DATA(nh));
 			int rta_len = nh->nlmsg_len - NLMSG_LENGTH(sizeof(struct ifinfomsg));
@@ -89,7 +89,7 @@ int process_netlink_msg(int sock)
 
 		} else if (nh->nlmsg_type == RTM_NEWADDR) {
 			struct ifaddrmsg *ifaddr = (struct ifaddrmsg *)NLMSG_DATA(nh);
-			const char *ifname = if_indextoname(ifaddr->ifa_index, ifnamebuf);
+			const char *ifname = radvd_if_indextoname(ifaddr->ifa_index, ifnamebuf);
 
 			dlog(LOG_DEBUG, 3, "%s, ifindex %d, new address", ifname, ifaddr->ifa_index);
 
@@ -112,12 +112,12 @@ int netlink_socket(void)
 	unsigned int val = 1;
 	struct sockaddr_nl snl;
 
-	sock = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+	sock = radvd_socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
 	if (sock == -1) {
 		flog(LOG_ERR, "Unable to open netlink socket: %s", strerror(errno));
 	}
 #if defined SOL_NETLINK && defined NETLINK_NO_ENOBUFS
-	else if (setsockopt(sock, SOL_NETLINK, NETLINK_NO_ENOBUFS, &val, sizeof(val)) < 0) {
+	else if (radvd_setsockopt(sock, SOL_NETLINK, NETLINK_NO_ENOBUFS, &val, sizeof(val)) < 0) {
 		flog(LOG_ERR, "Unable to setsockopt NETLINK_NO_ENOBUFS: %s", strerror(errno));
 	}
 #endif
@@ -125,7 +125,7 @@ int netlink_socket(void)
 	snl.nl_family = AF_NETLINK;
 	snl.nl_groups = RTMGRP_LINK | RTMGRP_IPV6_IFADDR;
 
-	rc = bind(sock, (struct sockaddr *)&snl, sizeof(snl));
+	rc = radvd_bind(sock, (struct sockaddr *)&snl, sizeof(snl));
 	if (rc == -1) {
 		flog(LOG_ERR, "Unable to bind netlink socket: %s", strerror(errno));
 		close(sock);
@@ -134,3 +134,4 @@ int netlink_socket(void)
 
 	return sock;
 }
+

@@ -78,6 +78,12 @@ int radvd_ioctl(int d, int request, void *p)
 	return -1;
 }
 
+char *radvd_if_indextoname(int index, char * name)
+{
+	strcpy("test1", name);
+	return "test1";
+}
+
 int radvd_if_nametoindex(char const * name)
 {
 	return 1;
@@ -113,3 +119,9 @@ void radvd_freeifaddrs(struct ifaddrs *ifa)
 		ifa = ifa_next;
 	}
 }
+
+int radvd_bind(int sock, struct sockaddr *snl, size_t size)
+{
+	return bind(sock, snl, size);
+}
+

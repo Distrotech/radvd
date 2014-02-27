@@ -32,6 +32,11 @@ int radvd_ioctl(int d, int request, void *p)
 	return ioctl(d, request, p);
 }
 
+char *radvd_if_indextoname(int index, char * name)
+{
+	return if_indextoname(index, name);
+}
+
 int radvd_if_nametoindex(char const * name)
 {
 	return if_nametoindex(name);
@@ -46,3 +51,9 @@ void radvd_freeifaddrs(struct ifaddrs *ifa)
 {
 	freeifaddrs(ifa);
 }
+
+int radvd_bind(int sock, struct sockaddr *snl, size_t size)
+{
+	return bind(sock, snl, size);
+}
+
