@@ -133,7 +133,7 @@ int send_ra(int sock, struct Interface *iface, struct in6_addr *dest)
 
 	if (!iface->AdvSendAdvert) {
 		dlog(LOG_DEBUG, 3, "AdvSendAdvert is off for %s", iface->Name);
-		return -1;
+		return 0;
 	}
 
 	dlog(LOG_DEBUG, 3, "sending RA on %s", iface->Name);
