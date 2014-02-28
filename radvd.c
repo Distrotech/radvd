@@ -111,6 +111,7 @@ int main(int argc, char *argv[])
 	char *chrootdir = NULL;
 	int configtest = 0;
 	int daemonize = 1;
+	int force_pid_file = 0;
 #ifdef HAVE_GETOPT_LONG
 	int opt_idx;
 #endif
@@ -148,6 +149,7 @@ int main(int argc, char *argv[])
 			break;
 		case 'p':
 			daemon_pid_file_ident = optarg;
+			force_pid_file = 1;
 			break;
 		case 'm':
 			if (!strcmp(optarg, "syslog")) {
@@ -260,6 +262,8 @@ int main(int argc, char *argv[])
 		flog(LOG_WARNING, "IPv6 forwarding seems to be disabled, but continuing anyway.");
 	}
 
+	daemon_pid_file_proc = radvd_get_pidfile;
+
 	/*
 	 * okay, config file is read in, socket and stuff is setup, so
 	 * lets fork now...
@@ -306,8 +310,6 @@ int main(int argc, char *argv[])
 			}
 		}
 
-		daemon_pid_file_proc = radvd_get_pidfile;
-
 		if (daemon_pid_file_is_running() >= 0) {
 			daemon_retval_send(1);
 			exit(1);
@@ -320,6 +322,18 @@ int main(int argc, char *argv[])
 
 		daemon_retval_send(0);
 	} else {
+		if (force_pid_file) {
+			if (daemon_pid_file_is_running() >= 0) {
+				flog(LOG_ERR, "radvd already running, terminating.");
+				exit(1);
+			}
+
+			if (daemon_pid_file_create()) {
+				flog(LOG_ERR, "Cannot create radvd PID file, terminating: %s", strerror(errno));
+				exit(2);
+			}
+		}
+
 		dlog(LOG_DEBUG, 3, "radvd PID is %d", getpid());
 	}
 
@@ -348,6 +362,10 @@ int main(int argc, char *argv[])
 	stop_adverts(sock, interfaces);
 	if (daemonize) {
 		flog(LOG_INFO, "removing %s", daemon_pid_file_ident);
+		daemon_pid_file_remove();
+	}
+	else if (force_pid_file) {
+		flog(LOG_INFO, "removing %s", radvd_get_pidfile());
 		daemon_pid_file_remove();
 	}
 
