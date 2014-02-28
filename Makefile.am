@@ -281,7 +281,11 @@ radvd-scanner.o scanner.o: scanner.c gram.h
 TESTS = \
 	addrtostr \
 	rand_between \
-	readn_writen
+	readn_writen \
+	check/trivial.sh
+
+check_SCRIPTS = \
+	check/trivial.sh
 
 check_PROGRAMS = \
 	addrtostr \
