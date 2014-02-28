@@ -1,3 +1,4 @@
+config.h.in~
 addrtostr
 libradvd-parser.a
 radvd_test
