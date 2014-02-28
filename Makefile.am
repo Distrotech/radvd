@@ -281,12 +281,12 @@ radvd-scanner.o scanner.o: scanner.c gram.h
 TESTS = \
 	addrtostr \
 	rand_between \
-	radvdion
+	readn_writen
 
 check_PROGRAMS = \
 	addrtostr \
 	rand_between \
-	radvdion
+	readn_writen
 
 addrtostr_SOURCES = \
 	util.c \
@@ -298,7 +298,7 @@ rand_between_SOURCES = \
 	log.c \
 	check/rand_between.c
 
-radvdion_SOURCES = \
+readn_writen_SOURCES = \
 	util.c \
 	log.c \
-	check/radvdion.c
+	check/readn_writen.c
