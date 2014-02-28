@@ -122,6 +122,6 @@ void radvd_freeifaddrs(struct ifaddrs *ifa)
 
 int radvd_bind(int sock, struct sockaddr *snl, size_t size)
 {
-	return bind(sock, snl, size);
+	return 0;
 }
 
