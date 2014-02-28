@@ -79,6 +79,8 @@ struct Interface {
 	struct AdvRDNSS *AdvRDNSSList;
 	struct AdvDNSSL *AdvDNSSLList;
 	struct Clients *ClientList;
+	struct AdvLowpanCo *AdvLowpanCoList;
+	struct AdvAbro *AdvAbroList;
 	struct timeval last_multicast;
 	struct timeval next_multicast;
 
@@ -87,6 +89,7 @@ struct Interface {
 
 	struct Interface *next;
 };
+
 
 struct Clients {
 	struct in6_addr Address;
@@ -157,6 +160,27 @@ struct AdvDNSSL {
 	struct AdvDNSSL *next;
 };
 
+/* Options for 6lopan configuration */
+
+struct AdvLowpanCo {
+	uint8_t ContextLength;
+	uint8_t ContextCompressionFlag;
+	uint8_t AdvContextID;
+	uint16_t AdvLifeTime;
+	struct in6_addr AdvContextPrefix;
+
+	struct AdvLowpanCo      *next;
+};
+
+struct AdvAbro {
+	uint16_t Version[2];
+	uint16_t ValidLifeTime;
+	struct in6_addr LBRaddress;
+
+	struct AdvAbro  *next;
+};
+
+
 /* Mobile IPv6 extensions */
 
 struct AdvInterval {
@@ -180,6 +204,36 @@ struct interfaces {
 	struct Interface **by_index;
 	unsigned int flags;
 };
+
+/* Uclibc : include/netinet/icmpv6.h - Added by Bhadram*/
+#define ND_OPT_ARO	33
+#define ND_OPT_6CO	34
+#define ND_OPT_ABRO	35
+
+struct nd_opt_abro
+{
+	uint8_t   nd_opt_abro_type;
+	uint8_t   nd_opt_abro_len;
+	uint16_t  nd_opt_abro_ver_low;
+	uint16_t  nd_opt_abro_ver_high;
+	uint16_t  nd_opt_abro_valid_lifetime;
+	uint8_t nd_opt_abro_reserved[3];
+	struct in6_addr nd_opt_abro_6lbr_address;
+};
+
+struct nd_opt_6co
+{
+	uint8_t   nd_opt_6co_type;
+	uint8_t   nd_opt_6co_len;
+	uint8_t   nd_opt_6co_context_len;
+	uint8_t   nd_opt_6co_res : 3;
+	uint8_t   nd_opt_6co_c : 1;
+	uint8_t   nd_opt_6co_cid : 4;
+	uint16_t  nd_opt_6co_reserved;
+	uint16_t  nd_opt_6co_valid_lifetime;
+	struct in6_addr nd_opt_6co_con_prefix;
+};/*Added by Bhadram*/
+
 
 /* gram.y */
 struct interfaces *readin_config(char const *fname);

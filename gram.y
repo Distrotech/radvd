@@ -63,6 +63,8 @@ static struct in6_addr get_prefix6(struct in6_addr const *addr, struct in6_addr 
 %token		T_RDNSS
 %token		T_DNSSL
 %token		T_CLIENTS
+%token		T_LOWPANCO
+%token		T_ABRO
 
 %token	<str>	STRING
 %token	<num>	NUMBER
@@ -120,6 +122,17 @@ static struct in6_addr get_prefix6(struct in6_addr const *addr, struct in6_addr 
 
 %token		T_AdvMobRtrSupportFlag
 
+%token		T_AdvContextLength
+%token		T_AdvContextCompressionFlag
+%token		T_AdvContextID
+%token		T_AdvLifeTime
+%token		T_AdvContextPrefix
+
+%token		T_AdvVersionLow
+%token		T_AdvVersionHigh
+%token		T_AdvValidLifeTime
+%token		T_Adv6LBRaddress
+
 %token		T_BAD_TOKEN
 
 %type	<str>	name
@@ -128,6 +141,8 @@ static struct in6_addr get_prefix6(struct in6_addr const *addr, struct in6_addr 
 %type	<rinfo>	routedef
 %type	<rdnssinfo> rdnssdef
 %type	<dnsslinfo> dnssldef
+%type   <lowpancoinfo> lowpancodef
+%type   <abroinfo> abrodef
 %type   <num>	number_or_infinity
 
 %union {
@@ -141,6 +156,8 @@ static struct in6_addr get_prefix6(struct in6_addr const *addr, struct in6_addr 
 	struct AdvRDNSS		*rdnssinfo;
 	struct AdvDNSSL		*dnsslinfo;
 	struct Clients		*ainfo;
+	struct AdvLowpanCo	*lowpancoinfo;
+	struct AdvAbro		*abroinfo;
 };
 
 %{
@@ -156,6 +173,8 @@ struct yydata
 	struct AdvRoute *route;
 	struct AdvRDNSS *rdnss;
 	struct AdvDNSSL *dnssl;
+	struct AdvLowpanCo *lowpanco;
+	struct AdvAbro  *abro;
 };
 static void cleanup(struct yydata * yydata);
 #define ABORT	do { cleanup(yydata); YYABORT; } while (0);
@@ -224,6 +243,8 @@ ifaceparam 	: ifaceval
 		| routedef 	{ ADD_TO_LL(struct AdvRoute, AdvRouteList, $1); }
 		| rdnssdef 	{ ADD_TO_LL(struct AdvRDNSS, AdvRDNSSList, $1); }
 		| dnssldef 	{ ADD_TO_LL(struct AdvDNSSL, AdvDNSSLList, $1); }
+		| lowpancodef   { ADD_TO_LL(struct AdvLowpanCo, AdvLowpanCoList, $1); }
+		| abrodef       { ADD_TO_LL(struct AdvAbro, AdvAbroList, $1); }
 		;
 
 ifaceval	: T_MinRtrAdvInterval NUMBER ';'
@@ -896,6 +917,99 @@ dnsslparms	: T_AdvDNSSLLifetime number_or_infinity ';'
 		}
 		;
 
+lowpancodef 	: lowpancohead  '{' optional_lowpancoplist '}' ';'
+		{
+			$$ = yydata->lowpanco;
+			yydata->lowpanco = NULL;
+		}
+		;
+
+lowpancohead	: T_LOWPANCO
+		{
+			yydata->lowpanco = malloc(sizeof(struct AdvLowpanCo));
+
+			if (yydata->lowpanco == NULL) {
+				flog(LOG_CRIT, "malloc failed: %s", strerror(errno));
+				ABORT;
+			}
+		}
+		;
+
+optional_lowpancoplist:
+		| lowpancoplist
+		;
+
+lowpancoplist	: lowpancoplist lowpancoparms
+		| lowpancoparms
+		;
+
+lowpancoparms 	: T_AdvContextLength NUMBER ';'
+		{
+			yydata->lowpanco->ContextLength = $2;
+		}
+		| T_AdvContextCompressionFlag SWITCH ';'
+		{
+			yydata->lowpanco->ContextCompressionFlag = $2;
+		}
+		| T_AdvContextID NUMBER ';'
+		{
+			yydata->lowpanco->AdvContextID = $2;
+		}
+		| T_AdvLifeTime NUMBER ';'
+		{
+			yydata->lowpanco->AdvLifeTime = $2;
+		}
+		;
+
+abrodef		: abrohead  '{' optional_abroplist '}' ';'
+		{
+			$$ = yydata->abro;
+			yydata->abro = NULL;
+		}
+		;
+
+abrohead	: T_ABRO IPV6ADDR '/' NUMBER
+		{
+			yydata->abro = malloc(sizeof(struct AdvAbro));
+
+			if (yydata->abro == NULL) {
+				flog(LOG_CRIT, "malloc failed: %s", strerror(errno));
+				ABORT;
+			}
+
+			if ($4 > MAX_PrefixLen)
+			{
+				/* TODO: print the locations of the duplicates. */
+				flog(LOG_ERR, "invalid abro prefix length in %s");
+				ABORT;
+			}
+			memcpy(&yydata->abro->LBRaddress, $2, sizeof(struct in6_addr));
+		}
+		;
+
+optional_abroplist:
+		| abroplist
+		;
+
+abroplist	: abroplist abroparms
+		| abroparms
+		;
+
+abroparms	: T_AdvVersionLow NUMBER ';'
+		{
+			yydata->abro->Version[1] = $2;
+		}
+		| T_AdvVersionHigh NUMBER ';'
+		{
+			yydata->abro->Version[0] = $2;
+		}
+		| T_AdvValidLifeTime NUMBER ';'
+		{
+			yydata->abro->ValidLifeTime = $2;
+		}
+		;
+
+
 number_or_infinity	: NUMBER
 			{
 				$$ = $1;
@@ -967,6 +1081,12 @@ static void cleanup(struct yydata * yydata)
 		free(yydata->dnssl->AdvDNSSLSuffixes);
 		free(yydata->dnssl);
 	}
+
+	if (yydata->lowpanco)
+		free(yydata->lowpanco);
+
+	if (yydata->abro)
+		free(yydata->abro);
 
 	if (yydata->IfaceList) {
 		free_iface_list(yydata->IfaceList);

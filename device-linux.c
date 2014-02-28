@@ -68,6 +68,11 @@ int update_device_info(int sock, struct Interface *iface)
 		dlog(LOG_DEBUG, 3, "hardware address is %s", hwaddr);
 		break;
 
+	case ARPHRD_IEEE802154:
+		iface->if_hwaddr_len = 64;
+		iface->if_prefix_len = 64;
+		break;
+
 #ifdef ARPHRD_FDDI
 	case ARPHRD_FDDI:
 		iface->if_hwaddr_len = 48;
