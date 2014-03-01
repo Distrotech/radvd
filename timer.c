@@ -43,11 +43,3 @@ int next_time_msec(struct Interface const *iface)
 	return retval >= 1 ? retval : 1;
 }
 
-int expired(struct Interface const *iface)
-{
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
-	if (timevaldiff(&iface->next_multicast, &tv) > 0)
-		return 0;
-	return 1;
-}
