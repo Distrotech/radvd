@@ -443,9 +443,11 @@ int send_ra(int sock, struct Interface *iface, struct in6_addr *dest)
 	}
 
 	lowpanco = iface->AdvLowpanCoList;
+
 	/*
 	 * Add 6co option
 	 */
+
 	if (lowpanco)
 	{
 		struct nd_opt_6co *co;
@@ -463,9 +465,11 @@ int send_ra(int sock, struct Interface *iface, struct in6_addr *dest)
 	}
 
 	abroo = iface->AdvAbroList;
+
 	/*
          * Add ABRO option
 	 */
+
 	if (abroo)
 	{
 		struct nd_opt_abro *abro;
