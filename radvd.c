@@ -351,11 +351,6 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	signal(SIGHUP, sighup_handler);
-	signal(SIGTERM, sigterm_handler);
-	signal(SIGINT, sigint_handler);
-	signal(SIGUSR1, sigusr1_handler);
-
 	setup_ifaces(sock, interfaces);
 	main_loop(sock, interfaces, conf_file);
 	flog(LOG_INFO, "sending stop adverts");
@@ -392,6 +387,38 @@ const char *radvd_get_pidfile(void)
 void main_loop(int sock, void *interfaces, char const *conf_file)
 {
 	struct pollfd fds[2];
+	sigset_t sigmask;
+	sigset_t sigempty;
+	struct sigaction sa;
+
+	sigemptyset(&sigempty);
+
+	sigemptyset(&sigmask);
+	sigaddset(&sigmask, SIGHUP);
+	sigaddset(&sigmask, SIGTERM);
+	sigaddset(&sigmask, SIGINT);
+	sigaddset(&sigmask, SIGUSR1);
+	sigprocmask(SIG_BLOCK, &sigmask, NULL);
+
+	sa.sa_handler = sighup_handler;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = 0;
+	sigaction(SIGHUP, &sa, 0);
+
+	sa.sa_handler = sigterm_handler;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = 0;
+	sigaction(SIGTERM, &sa, 0);
+
+	sa.sa_handler = sigint_handler;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = 0;
+	sigaction(SIGINT, &sa, 0);
+
+	sa.sa_handler = sigusr1_handler;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = 0;
+	sigaction(SIGUSR1, &sa, 0);
 
 	memset(fds, 0, sizeof(fds));
 
@@ -408,6 +435,7 @@ void main_loop(int sock, void *interfaces, char const *conf_file)
 	for (;;) {
 		struct Interface *next_iface_to_expire;
 		int timeout;
+		struct timespec ts;
 		int rc;
 
 		next_iface_to_expire = find_iface_by_time(interfaces);
@@ -419,7 +447,10 @@ void main_loop(int sock, void *interfaces, char const *conf_file)
 
 		dlog(LOG_DEBUG, 5, "polling for %g seconds. Next iface is %s.", timeout / 1000.0, next_iface_to_expire->Name);
 
-		rc = poll(fds, sizeof(fds) / sizeof(fds[0]), timeout);
+		ts.tv_sec = timeout / 1000;
+		ts.tv_nsec = (timeout - 1000*ts.tv_sec) * 1000000;
+
+		rc = ppoll(fds, sizeof(fds) / sizeof(fds[0]), &ts, &sigempty);
 
 		if (rc > 0) {
 #ifdef HAVE_NETLINK
