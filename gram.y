@@ -932,6 +932,8 @@ lowpancohead	: T_LOWPANCO
 				flog(LOG_CRIT, "malloc failed: %s", strerror(errno));
 				ABORT;
 			}
+
+			memset(yydata->lowpanco, 0, sizeof(struct AdvLowpanCo));
 		}
 		;
 
@@ -970,6 +972,13 @@ abrodef		: abrohead  '{' optional_abroplist '}' ';'
 
 abrohead	: T_ABRO IPV6ADDR '/' NUMBER
 		{
+			if ($4 > MAX_PrefixLen)
+			{
+				/* TODO: print the locations. */
+				flog(LOG_ERR, "invalid abro prefix length in %s");
+				ABORT;
+			}
+
 			yydata->abro = malloc(sizeof(struct AdvAbro));
 
 			if (yydata->abro == NULL) {
@@ -977,12 +986,7 @@ abrohead	: T_ABRO IPV6ADDR '/' NUMBER
 				ABORT;
 			}
 
-			if ($4 > MAX_PrefixLen)
-			{
-				/* TODO: print the locations of the duplicates. */
-				flog(LOG_ERR, "invalid abro prefix length in %s");
-				ABORT;
-			}
+			memset(yydata->abro, 0, sizeof(struct AdvAbro));
 			memcpy(&yydata->abro->LBRaddress, $2, sizeof(struct in6_addr));
 		}
 		;
