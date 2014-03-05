@@ -546,6 +546,7 @@ void config_interface(struct Interface *iface)
 
 void kickoff_adverts(int sock, struct Interface *iface)
 {
+	double next; /* TODO: double? */
 
 	/*
 	 *      send initial advertisement and set timers
@@ -560,13 +561,13 @@ void kickoff_adverts(int sock, struct Interface *iface)
 
 	/* send an initial advertisement */
 	if (send_ra_forall(sock, iface, NULL) == 0) {
-		double next;
-
-		iface->init_racount++;
-
-		next = min(MAX_INITIAL_RTR_ADVERT_INTERVAL, iface->MaxRtrAdvInterval);
-		iface->next_multicast = next_timeval(next);
+		dlog(LOG_DEBUG, 4, "send_ra_forall failed on interface %s", iface->Name);
 	}
+
+	iface->init_racount++;
+
+	next = min(MAX_INITIAL_RTR_ADVERT_INTERVAL, iface->MaxRtrAdvInterval);
+	iface->next_multicast = next_timeval(next);
 }
 
 void stop_advert_foo(struct Interface *iface, void *data)
