@@ -18,7 +18,7 @@
 
 AUTOMAKE_OPTIONS = 1.2 foreign
 
-####  Compiler flags and such
+###  Compiler flags and such ###
 
 DEFS = \
 	-DINET6=1 \
@@ -46,7 +46,7 @@ AM_CFLAGS = \
 	$(ENABLE_WARNINGS) \
 	$(DISABLE_WARNINGS)
 
-# CPP is C PreProcessor
+### CPP is C PreProcessor ###
 
 AM_YFLAGS = -d
 
@@ -54,7 +54,8 @@ radvd_CPPFLAGS = \
 	@DAEMON_CFLAGS@
 
 radvd_test_CPPFLAGS = \
-	@DAEMON_CFLAGS@
+	@DAEMON_CFLAGS@ \
+	-D RADVD_TEST
 
 noinst_LIBRARIES = libradvd-parser.a
 
@@ -130,8 +131,7 @@ radvd_SOURCES = \
 	process.c \
 	radvd.c \
 	send.c \
-	timer.c \
-	syscalls.c
+	timer.c
 
 radvdump_SOURCES = \
 	defaults.h \
@@ -143,7 +143,6 @@ radvdump_SOURCES = \
 	recv.c \
 	socket.c \
 	util.c \
-	syscalls.c \
 	radvdump.c
 
 ### coverage ###

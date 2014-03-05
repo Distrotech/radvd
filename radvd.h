@@ -286,7 +286,8 @@ int send_ra(int sock, struct Interface *iface, struct in6_addr *dest);
 int send_ra_forall(int sock, struct Interface *iface, struct in6_addr *dest);
 int really_send(int sock, struct in6_addr const *dest, unsigned int if_index, struct in6_addr if_addr, unsigned char *buff, size_t len);
 
-/* syscalls.c */
+#ifdef RADVD_TEST
+/* syscalls_test.c */
 int radvd_socket(int domain, int type, int protocol);
 ssize_t radvd_sendmsg(int sockfd, const struct msghdr *msg, int flags);
 ssize_t radvd_recvmsg(int sockfd, struct msghdr *msg, int flags);
@@ -298,6 +299,18 @@ char * radvd_if_indextoname(int index, char *name);
 int radvd_getifaddrs(struct ifaddrs **addresses);
 void radvd_freeifaddrs(struct ifaddrs*);
 int radvd_bind(int sock, struct sockaddr *snl, size_t size);
+#else
+#define radvd_socket socket
+#define radvd_sendmsg sendmsg
+#define radvd_recvmsg recvmsg
+#define radvd_setsockopt setsockopt
+#define radvd_ioctl ioctl  
+#define radvd_if_nametoindex if_nametoindex 
+#define radvd_if_indextoname if_indextoname
+#define radvd_getifaddrs getifaddrs
+#define radvd_freeifaddrs freeifaddrs
+#define radvd_bind bind
+#endif
 
 /* process.c */
 void process(int sock, struct interfaces *, unsigned char *, int, struct sockaddr_in6 *, struct in6_pktinfo *, int);
