@@ -19,6 +19,13 @@ int radvd_socket(int domain, int type, int protocol)
 
 ssize_t radvd_sendmsg(int sockfd, const struct msghdr *msg, int flags)
 {
+	size_t i;
+	printf("%d (0x%x):\n", sockfd, flags);
+	printf("\tnamelen:    %lu\n", (size_t)msg->msg_namelen);
+	printf("\tiovlen:     %lu\n", msg->msg_iovlen);
+	for (i = 0; i < msg->msg_iovlen; ++i) {
+		printf("\t\tiov[%lu].iov_len: %lu\n", i, msg->msg_iov[i].iov_len);
+	}
 	return 0;//sendmsg(sockfd, msg, flags);
 }
 
