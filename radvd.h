@@ -262,6 +262,7 @@ int set_interface_linkmtu(const char *, uint32_t);
 int set_interface_curhlim(const char *, uint8_t);
 int set_interface_reachtime(const char *, uint32_t);
 int set_interface_retranstimer(const char *, uint32_t);
+int check_ip6_forwarding(void);
 
 /* interface.c */
 void iface_init_defaults(struct Interface *);
