@@ -17,6 +17,7 @@
 #include "includes.h"
 #include "radvd.h"
 
+size_t add_sllao(unsigned char * buff, size_t len, struct Interface * iface);
 /*
  * Sends an advertisement for all specified clients of this interface
  * (or via broadcast, if there are no restrictions configured).
@@ -75,6 +76,55 @@ static void send_ra_inc_len(size_t * len, int add)
 		exit(1);
 	}
 }
+
+size_t add_sllao(unsigned char * buff, size_t len, struct Interface * iface)
+{
+	/*
+	4.6.1.  Source/Target Link-layer Address
+
+	      0                   1                   2                   3
+	      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+	     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	     |     Type      |    Length     |    Link-Layer Address ...
+	     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+	   Fields:
+
+	      Type
+			     1 for Source Link-layer Address
+			     2 for Target Link-layer Address
+
+	      Length         The length of the option (including the type and
+			     length fields) in units of 8 octets.  For example,
+			     the length for IEEE 802 addresses is 1 [IPv6-
+			     ETHER].
+
+	      Link-Layer Address
+			     The variable length link-layer address.
+
+			     The content and format of this field (including
+			     byte and bit ordering) is expected to be specified
+			     in specific documents that describe how IPv6
+			     operates over different link layers.  For instance,
+			     [IPv6-ETHER].
+
+	*/
+	/* +16 for the header and the sllao_len, +63 to round up eight bytes
+	 * >>6 (divide by 64) to get the number of bytes. */
+	size_t sllao_octets = (iface->if_hwaddr_len +16) >> 3;
+	uint8_t *sllao = (uint8_t *) (buff + len);
+
+	send_ra_inc_len(&len, sllao_octets);
+
+	*sllao++ = ND_OPT_SOURCE_LINKADDR;
+	*sllao++ = (uint8_t)(sllao_octets +63) >> 3;
+
+	/* if_hwaddr_len is in bits, so divide by 8 (>>3) to get the byte count. */
+	memcpy(sllao, iface->if_hwaddr, iface->if_hwaddr_len >> 3);
+
+	return len;
+}
+
 
 static time_t time_diff_secs(const struct timeval *time_x, const struct timeval *time_y)
 {
@@ -378,18 +428,7 @@ int send_ra(int sock, struct Interface *iface, struct in6_addr *dest)
 	 */
 
 	if (iface->AdvSourceLLAddress && iface->if_hwaddr_len > 0) {
-		/* +16 for the header and the sllao_len, +63 to round up an octet, >>6 (divide by 64 
-		 * to get the number of octets. */
-		size_t sllao_len = (iface->if_hwaddr_len +16 +63) >> 6;
-		uint8_t *sllao = (uint8_t *) (buff + len);
-
-		send_ra_inc_len(&len, sllao_len);
-
-		*sllao++ = ND_OPT_SOURCE_LINKADDR;
-		*sllao++ = (uint8_t)sllao_len;
-
-		/* if_hwaddr_len is in bits, so divide by 8 (>>3) to get the byte count. */
-		memcpy(sllao, iface->if_hwaddr, iface->if_hwaddr_len >> 3);
+		len = add_sllao(buff, len, iface);
 	}
 
 	/*
