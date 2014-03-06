@@ -17,7 +17,6 @@
 #include "includes.h"
 #include "radvd.h"
 
-size_t add_sllao(unsigned char * buff, size_t len, struct Interface * iface);
 static int ensure_iface_setup(int sock, struct Interface *iface);
 
 /*
@@ -79,7 +78,7 @@ static void send_ra_inc_len(size_t * len, int add)
 	}
 }
 
-size_t add_sllao(unsigned char * buff, size_t len, struct Interface * iface)
+void add_sllao(unsigned char * buff, size_t * len, struct Interface * iface)
 {
 	/*
 	4.6.1.  Source/Target Link-layer Address
@@ -111,20 +110,18 @@ size_t add_sllao(unsigned char * buff, size_t len, struct Interface * iface)
 			     [IPv6-ETHER].
 
 	*/
-	/* +16 for the header and the sllao_len, +63 to round up eight bytes
-	 * >>6 (divide by 64) to get the number of bytes. */
-	size_t sllao_octets = (iface->if_hwaddr_len +16) >> 3;
-	uint8_t *sllao = (uint8_t *) (buff + len);
+	/* +2 for the ND_OPT_SOURCE_LINKADDR and the length (each occupy one byte) */
+	size_t const sllao_bytes = (iface->if_hwaddr_len / 8) +2;
+	size_t const sllao_len = (sllao_bytes +7) / 8;
+	uint8_t *sllao = (uint8_t *) (buff + *len);
 
-	send_ra_inc_len(&len, sllao_octets);
+	send_ra_inc_len(len, sllao_len * 8);
 
 	*sllao++ = ND_OPT_SOURCE_LINKADDR;
-	*sllao++ = (uint8_t)(sllao_octets +63) >> 3;
+	*sllao++ = (uint8_t)sllao_len;
 
-	/* if_hwaddr_len is in bits, so divide by 8 (>>3) to get the byte count. */
-	memcpy(sllao, iface->if_hwaddr, iface->if_hwaddr_len >> 3);
-
-	return len;
+	/* if_hwaddr_len is in bits, so divide by 8 to get the byte count. */
+	memcpy(sllao, iface->if_hwaddr, iface->if_hwaddr_len / 8);
 }
 
 
@@ -439,7 +436,7 @@ int send_ra(int sock, struct Interface *iface, struct in6_addr *dest)
 	 */
 
 	if (iface->AdvSourceLLAddress && iface->if_hwaddr_len > 0) {
-		len = add_sllao(buff, len, iface);
+		add_sllao(buff, &len, iface);
 	}
 
 	/*
