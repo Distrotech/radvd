@@ -18,6 +18,8 @@
 #include "radvd.h"
 
 size_t add_sllao(unsigned char * buff, size_t len, struct Interface * iface);
+static int ensure_iface_setup(int sock, struct Interface *iface);
+
 /*
  * Sends an advertisement for all specified clients of this interface
  * (or via broadcast, if there are no restrictions configured).
@@ -156,6 +158,15 @@ static void cease_adv_pfx_msg(const char *if_name, struct in6_addr *pfx, const i
 
 	dlog(LOG_DEBUG, 3, "Will cease advertising %s/%u%%%s, preferred lifetime is 0", pfx_str, pfx_len, if_name);
 
+}
+
+static int ensure_iface_setup(int sock, struct Interface *iface)
+{
+#ifndef HAVE_NETLINK
+	setup_iface(sock, iface);
+#endif
+
+	return (iface->ready ? 0 : -1);
 }
 
 int send_ra(int sock, struct Interface *iface, struct in6_addr *dest)

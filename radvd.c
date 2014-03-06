@@ -671,15 +671,6 @@ void setup_ifaces(int sock, void *interfaces)
 	for_each_iface(interfaces, setup_iface_foo, &sock);
 }
 
-int ensure_iface_setup(int sock, struct Interface *iface)
-{
-#ifndef HAVE_NETLINK
-	setup_iface(sock, iface);
-#endif
-
-	return (iface->ready ? 0 : -1);
-}
-
 struct Interface *reload_config(int sock, void *interfaces, char const *conf_file)
 {
 	free_ifaces(interfaces);

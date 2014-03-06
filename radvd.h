@@ -242,7 +242,6 @@ struct interfaces *readin_config(char const *fname);
 
 /* radvd.c */
 int check_ip6_forwarding(void);
-int ensure_iface_setup(int sock, struct Interface *iface);
 int setup_iface(int sock, struct Interface *iface);
 
 /* timer.c */
