@@ -280,6 +280,7 @@ radvd-scanner.o scanner.o: scanner.c gram.h
 
 TESTS = \
 	addrtostr \
+	sllao \
 	rand_between \
 	readn_writen \
 	check/trivial.sh
@@ -289,6 +290,7 @@ check_SCRIPTS = \
 
 check_PROGRAMS = \
 	addrtostr \
+	sllao \
 	rand_between \
 	readn_writen
 
@@ -296,6 +298,17 @@ addrtostr_SOURCES = \
 	util.c \
 	log.c \
 	check/addrtostr.c
+
+sllao_CPPFLAGS = \
+	-D RADVD_TEST
+
+sllao_SOURCES = \
+	util.c \
+	log.c \
+	device-common.c \
+	syscalls_test.c \
+	send.c \
+	check/sllao.c
 
 rand_between_SOURCES = \
 	util.c \
