@@ -280,7 +280,8 @@ int send_ra(int sock, struct Interface *iface, struct in6_addr *dest)
 
 			memcpy(&pinfo->nd_opt_pi_prefix, &prefix->Prefix, sizeof(struct in6_addr));
 			addrtostr(&prefix->Prefix, addr_str, sizeof(addr_str));
-			dlog(LOG_DEBUG, 5, "adding prefix %s to advert for %s", addr_str, iface->Name);
+			dlog(LOG_DEBUG, 5, "adding prefix %s to advert for %s with %u seconds(s) valid lifetime and %u seconds(s) preferred time",
+				addr_str, iface->Name, ntohl(pinfo->nd_opt_pi_valid_time), ntohl(pinfo->nd_opt_pi_preferred_time));
 		}
 
 		prefix = prefix->next;
