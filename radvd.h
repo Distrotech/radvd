@@ -92,7 +92,6 @@ struct Interface {
 	struct Interface *next;
 };
 
-
 struct Clients {
 	struct in6_addr Address;
 	struct Clients *next;
@@ -171,7 +170,7 @@ struct AdvLowpanCo {
 	uint16_t AdvLifeTime;
 	struct in6_addr AdvContextPrefix;
 
-	struct AdvLowpanCo      *next;
+	struct AdvLowpanCo *next;
 };
 
 struct AdvAbro {
@@ -179,9 +178,8 @@ struct AdvAbro {
 	uint16_t ValidLifeTime;
 	struct in6_addr LBRaddress;
 
-	struct AdvAbro  *next;
+	struct AdvAbro *next;
 };
-
 
 /* Mobile IPv6 extensions */
 
@@ -212,30 +210,27 @@ struct interfaces {
 #define ND_OPT_6CO	34
 #define ND_OPT_ABRO	35
 
-struct nd_opt_abro
-{
-	uint8_t   nd_opt_abro_type;
-	uint8_t   nd_opt_abro_len;
-	uint16_t  nd_opt_abro_ver_low;
-	uint16_t  nd_opt_abro_ver_high;
-	uint16_t  nd_opt_abro_valid_lifetime;
+struct nd_opt_abro {
+	uint8_t nd_opt_abro_type;
+	uint8_t nd_opt_abro_len;
+	uint16_t nd_opt_abro_ver_low;
+	uint16_t nd_opt_abro_ver_high;
+	uint16_t nd_opt_abro_valid_lifetime;
 	uint8_t nd_opt_abro_reserved[3];
 	struct in6_addr nd_opt_abro_6lbr_address;
 };
 
-struct nd_opt_6co
-{
-	uint8_t   nd_opt_6co_type;
-	uint8_t   nd_opt_6co_len;
-	uint8_t   nd_opt_6co_context_len;
-	uint8_t   nd_opt_6co_res : 3;
-	uint8_t   nd_opt_6co_c : 1;
-	uint8_t   nd_opt_6co_cid : 4;
-	uint16_t  nd_opt_6co_reserved;
-	uint16_t  nd_opt_6co_valid_lifetime;
+struct nd_opt_6co {
+	uint8_t nd_opt_6co_type;
+	uint8_t nd_opt_6co_len;
+	uint8_t nd_opt_6co_context_len;
+	uint8_t nd_opt_6co_res:3;
+	uint8_t nd_opt_6co_c:1;
+	uint8_t nd_opt_6co_cid:4;
+	uint16_t nd_opt_6co_reserved;
+	uint16_t nd_opt_6co_valid_lifetime;
 	struct in6_addr nd_opt_6co_con_prefix;
-};/*Added by Bhadram*/
-
+};				/*Added by Bhadram */
 
 /* gram.y */
 struct interfaces *readin_config(char const *fname);
@@ -285,28 +280,27 @@ int open_icmpv6_socket(void);
 int send_ra(int sock, struct Interface *iface, struct in6_addr *dest);
 int send_ra_forall(int sock, struct Interface *iface, struct in6_addr *dest);
 int really_send(int sock, struct in6_addr const *dest, unsigned int if_index, struct in6_addr if_addr, unsigned char *buff, size_t len);
-void add_sllao(unsigned char * buff, size_t * len, struct Interface * iface);
+void add_sllao(unsigned char *buff, size_t * len, struct Interface *iface);
 
 #ifdef RADVD_TEST
 /* syscalls_test.c */
 int radvd_socket(int domain, int type, int protocol);
 ssize_t radvd_sendmsg(int sockfd, const struct msghdr *msg, int flags);
 ssize_t radvd_recvmsg(int sockfd, struct msghdr *msg, int flags);
-int radvd_setsockopt(int sockfd, int level, int optname,
-                      const void *optval, socklen_t optlen);
+int radvd_setsockopt(int sockfd, int level, int optname, const void *optval, socklen_t optlen);
 int radvd_ioctl(int d, int request, void *p);
-int radvd_if_nametoindex(char const * name);
-char * radvd_if_indextoname(int index, char *name);
+int radvd_if_nametoindex(char const *name);
+char *radvd_if_indextoname(int index, char *name);
 int radvd_getifaddrs(struct ifaddrs **addresses);
-void radvd_freeifaddrs(struct ifaddrs*);
+void radvd_freeifaddrs(struct ifaddrs *);
 int radvd_bind(int sock, struct sockaddr *snl, size_t size);
 #else
 #define radvd_socket socket
 #define radvd_sendmsg sendmsg
 #define radvd_recvmsg recvmsg
 #define radvd_setsockopt setsockopt
-#define radvd_ioctl ioctl  
-#define radvd_if_nametoindex if_nametoindex 
+#define radvd_ioctl ioctl
+#define radvd_if_nametoindex if_nametoindex
 #define radvd_if_indextoname if_indextoname
 #define radvd_getifaddrs getifaddrs
 #define radvd_freeifaddrs freeifaddrs

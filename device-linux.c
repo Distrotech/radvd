@@ -58,6 +58,7 @@ int update_device_info(int sock, struct Interface *iface)
 	case ARPHRD_ETHER:
 		iface->if_hwaddr_len = 48;
 		iface->if_prefix_len = 64;
+		/* *INDENT-OFF* */
 		sprintf(hwaddr, "%02x:%02x:%02x:%02x:%02x:%02x",
 			(unsigned char)ifr.ifr_hwaddr.sa_data[0],
 			(unsigned char)ifr.ifr_hwaddr.sa_data[1],
@@ -65,6 +66,7 @@ int update_device_info(int sock, struct Interface *iface)
 			(unsigned char)ifr.ifr_hwaddr.sa_data[3],
 			(unsigned char)ifr.ifr_hwaddr.sa_data[4],
 			(unsigned char)ifr.ifr_hwaddr.sa_data[5]);
+		/* *INDENT-ON* */
 		dlog(LOG_DEBUG, 3, "hardware address is %s", hwaddr);
 		break;
 

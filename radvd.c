@@ -358,8 +358,7 @@ int main(int argc, char *argv[])
 	if (daemonize) {
 		flog(LOG_INFO, "removing %s", daemon_pid_file_ident);
 		daemon_pid_file_remove();
-	}
-	else if (force_pid_file) {
+	} else if (force_pid_file) {
 		flog(LOG_INFO, "removing %s", radvd_get_pidfile());
 		daemon_pid_file_remove();
 	}
@@ -448,7 +447,7 @@ void main_loop(int sock, void *interfaces, char const *conf_file)
 		dlog(LOG_DEBUG, 5, "polling for %g seconds. Next iface is %s.", timeout / 1000.0, next_iface_to_expire->Name);
 
 		ts.tv_sec = timeout / 1000;
-		ts.tv_nsec = (timeout - 1000*ts.tv_sec) * 1000000;
+		ts.tv_nsec = (timeout - 1000 * ts.tv_sec) * 1000000;
 
 		rc = ppoll(fds, sizeof(fds) / sizeof(fds[0]), &ts, &sigempty);
 
@@ -546,7 +545,7 @@ void config_interface(struct Interface *iface)
 
 void kickoff_adverts(int sock, struct Interface *iface)
 {
-	double next; /* TODO: double? */
+	double next;		/* TODO: double? */
 
 	/*
 	 *      send initial advertisement and set timers
@@ -603,7 +602,7 @@ int setup_iface(int sock, struct Interface *iface)
 	case 1:
 		/* the iface index changed */
 		iface_index_changed(iface);
-		/**/ break;
+		 /**/ break;
 
 	case 2:
 		/* the iface index failed */
@@ -613,7 +612,7 @@ int setup_iface(int sock, struct Interface *iface)
 	case 3:
 		/* the iface index changed and failed */
 		iface_index_changed(iface);
-		/**/ return -1;
+		 /**/ return -1;
 		break;
 
 	default:

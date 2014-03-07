@@ -2,7 +2,7 @@
 #include "config.h"
 #include "radvd.h"
 
-#include <sys/types.h> 
+#include <sys/types.h>
 #include <sys/socket.h>
 
 static int socks[2];
@@ -17,67 +17,65 @@ int radvd_socket(int domain, int type, int protocol)
 	return socks[0];
 }
 
-ssize_t radvd_sendmsg(int sockfd, const struct msghdr *msg, int flags)
+ssize_t radvd_sendmsg(int sockfd, const struct msghdr * msg, int flags)
 {
 	size_t i;
 	printf("%d (0x%x):\n", sockfd, flags);
-	printf("\tnamelen:    %lu\n", (size_t)msg->msg_namelen);
+	printf("\tnamelen:    %lu\n", (size_t) msg->msg_namelen);
 	printf("\tiovlen:     %lu\n", msg->msg_iovlen);
 	for (i = 0; i < msg->msg_iovlen; ++i) {
 		printf("\t\tiov[%lu].iov_len: %lu\n", i, msg->msg_iov[i].iov_len);
 	}
-	return 0;//sendmsg(sockfd, msg, flags);
+	return 0;		//sendmsg(sockfd, msg, flags);
 }
 
-ssize_t radvd_recvmsg(int sockfd, struct msghdr *msg, int flags)
+ssize_t radvd_recvmsg(int sockfd, struct msghdr * msg, int flags)
 {
-	return 0;//recvmsg(sockfd, msg, flags);
+	return 0;		//recvmsg(sockfd, msg, flags);
 }
 
-int radvd_setsockopt(int sockfd, int level, int optname,
-                      const void *optval, socklen_t optlen)
+int radvd_setsockopt(int sockfd, int level, int optname, const void *optval, socklen_t optlen)
 {
-	return 0;//setsockopt(sockfd, level, optname, optval, optlen);
+	return 0;		//setsockopt(sockfd, level, optname, optval, optlen);
 }
-
 
 /*
 */
 int radvd_ioctl(int d, int request, void *p)
 {
-	struct ifreq *ifr = (struct ifreq*)p;
+	struct ifreq *ifr = (struct ifreq *)p;
 
 	switch (request) {
 	case SIOCGIFMTU:{
-		int * mtu = (int*)&ifr->ifr_mtu;
-		*mtu = 1500;
-		return 0;
-	}
+			int *mtu = (int *)&ifr->ifr_mtu;
+			*mtu = 1500;
+			return 0;
+		}
 
 	case SIOCGIFFLAGS:{
-		int * flags = (int*)&ifr->ifr_flags;
-		*flags = IFF_UP | IFF_RUNNING | IFF_MULTICAST;
-		return 0;
-	}
+			int *flags = (int *)&ifr->ifr_flags;
+			*flags = IFF_UP | IFF_RUNNING | IFF_MULTICAST;
+			return 0;
+		}
 
 	case SIOCGIFADDR:{
-		struct sockaddr_in * ipaddr = (struct sockaddr_in*)&ifr->ifr_addr;
-		inet_pton(AF_INET6, "2002::", ipaddr);
-		return 0;
-	}
+			struct sockaddr_in *ipaddr = (struct sockaddr_in *)&ifr->ifr_addr;
+			inet_pton(AF_INET6, "2002::", ipaddr);
+			return 0;
+		}
 
 	case SIOCGIFHWADDR:{
-		ifr->ifr_hwaddr.sa_family = ARPHRD_ETHER;
+			ifr->ifr_hwaddr.sa_family = ARPHRD_ETHER;
 
-		ifr->ifr_hwaddr.sa_data[0] = 0;
-		ifr->ifr_hwaddr.sa_data[1] = 0;
-		ifr->ifr_hwaddr.sa_data[2] = 0;
-		ifr->ifr_hwaddr.sa_data[3] = 0;
-		ifr->ifr_hwaddr.sa_data[4] = 0;
-		ifr->ifr_hwaddr.sa_data[5] = 1;
+			ifr->ifr_hwaddr.sa_data[0] = 0;
+			ifr->ifr_hwaddr.sa_data[1] = 0;
+			ifr->ifr_hwaddr.sa_data[2] = 0;
+			ifr->ifr_hwaddr.sa_data[3] = 0;
+			ifr->ifr_hwaddr.sa_data[4] = 0;
+			ifr->ifr_hwaddr.sa_data[5] = 1;
 
-		return 0;
-	}
+			return 0;
+		}
 
 	default:
 		break;
@@ -85,20 +83,20 @@ int radvd_ioctl(int d, int request, void *p)
 	return -1;
 }
 
-char *radvd_if_indextoname(int index, char * name)
+char *radvd_if_indextoname(int index, char *name)
 {
 	strcpy("test1", name);
 	return "test1";
 }
 
-int radvd_if_nametoindex(char const * name)
+int radvd_if_nametoindex(char const *name)
 {
 	return 1;
 }
 
 int radvd_getifaddrs(struct ifaddrs **addresses)
 {
-	struct ifaddrs * ifa;
+	struct ifaddrs *ifa;
 	struct sockaddr_in6 *a6;
 
 	ifa = malloc(sizeof(struct ifaddrs));
@@ -119,7 +117,7 @@ int radvd_getifaddrs(struct ifaddrs **addresses)
 void radvd_freeifaddrs(struct ifaddrs *ifa)
 {
 	while (ifa) {
-		struct ifaddrs * ifa_next = ifa->ifa_next;
+		struct ifaddrs *ifa_next = ifa->ifa_next;
 		free(ifa->ifa_name);
 		free(ifa->ifa_addr);
 		free(ifa);
@@ -131,4 +129,3 @@ int radvd_bind(int sock, struct sockaddr *snl, size_t size)
 {
 	return 0;
 }
-

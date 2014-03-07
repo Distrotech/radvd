@@ -165,7 +165,6 @@ int update_device_index(struct Interface *iface)
 	return retval;
 }
 
-
 int check_ip6_forwarding(void)
 {
 #ifdef HAVE_SYS_SYSCTL_H
@@ -221,4 +220,3 @@ int check_ip6_forwarding(void)
 
 	return (0);
 }
-

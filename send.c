@@ -78,8 +78,9 @@ static void send_ra_inc_len(size_t * len, int add)
 	}
 }
 
-void add_sllao(unsigned char * buff, size_t * len, struct Interface * iface)
+void add_sllao(unsigned char *buff, size_t * len, struct Interface *iface)
 {
+	/* *INDENT-OFF* */
 	/*
 	4.6.1.  Source/Target Link-layer Address
 
@@ -109,21 +110,21 @@ void add_sllao(unsigned char * buff, size_t * len, struct Interface * iface)
 			     operates over different link layers.  For instance,
 			     [IPv6-ETHER].
 
-	*/
+	 */
+	/* *INDENT-ON* */
 	/* +2 for the ND_OPT_SOURCE_LINKADDR and the length (each occupy one byte) */
-	size_t const sllao_bytes = (iface->if_hwaddr_len / 8) +2;
-	size_t const sllao_len = (sllao_bytes +7) / 8;
+	size_t const sllao_bytes = (iface->if_hwaddr_len / 8) + 2;
+	size_t const sllao_len = (sllao_bytes + 7) / 8;
 	uint8_t *sllao = (uint8_t *) (buff + *len);
 
 	send_ra_inc_len(len, sllao_len * 8);
 
 	*sllao++ = ND_OPT_SOURCE_LINKADDR;
-	*sllao++ = (uint8_t)sllao_len;
+	*sllao++ = (uint8_t) sllao_len;
 
 	/* if_hwaddr_len is in bits, so divide by 8 to get the byte count. */
 	memcpy(sllao, iface->if_hwaddr, iface->if_hwaddr_len / 8);
 }
-
 
 static time_t time_diff_secs(const struct timeval *time_x, const struct timeval *time_y)
 {
@@ -281,7 +282,7 @@ int send_ra(int sock, struct Interface *iface, struct in6_addr *dest)
 			memcpy(&pinfo->nd_opt_pi_prefix, &prefix->Prefix, sizeof(struct in6_addr));
 			addrtostr(&prefix->Prefix, addr_str, sizeof(addr_str));
 			dlog(LOG_DEBUG, 5, "adding prefix %s to advert for %s with %u seconds(s) valid lifetime and %u seconds(s) preferred time",
-				addr_str, iface->Name, ntohl(pinfo->nd_opt_pi_valid_time), ntohl(pinfo->nd_opt_pi_preferred_time));
+			     addr_str, iface->Name, ntohl(pinfo->nd_opt_pi_valid_time), ntohl(pinfo->nd_opt_pi_preferred_time));
 		}
 
 		prefix = prefix->next;
@@ -488,12 +489,11 @@ int send_ra(int sock, struct Interface *iface, struct in6_addr *dest)
 	 * Add 6co option
 	 */
 
-	if (lowpanco)
-	{
+	if (lowpanco) {
 		struct nd_opt_6co *co;
-		co = (struct nd_opt_6co *)(buff+len);
+		co = (struct nd_opt_6co *)(buff + len);
 
-		send_ra_inc_len(&len,sizeof(*co));
+		send_ra_inc_len(&len, sizeof(*co));
 
 		co->nd_opt_6co_type = ND_OPT_6CO;
 		co->nd_opt_6co_len = 3;
@@ -507,15 +507,14 @@ int send_ra(int sock, struct Interface *iface, struct in6_addr *dest)
 	abroo = iface->AdvAbroList;
 
 	/*
-         * Add ABRO option
+	 * Add ABRO option
 	 */
 
-	if (abroo)
-	{
+	if (abroo) {
 		struct nd_opt_abro *abro;
-		abro = (struct nd_opt_abro *)(buff+len);
+		abro = (struct nd_opt_abro *)(buff + len);
 
-		send_ra_inc_len(&len,sizeof(*abro));
+		send_ra_inc_len(&len, sizeof(*abro));
 
 		abro->nd_opt_abro_type = ND_OPT_ABRO;
 		abro->nd_opt_abro_len = 3;

@@ -42,4 +42,3 @@ int next_time_msec(struct Interface const *iface)
 	retval = timevaldiff(&iface->next_multicast, &tv);
 	return retval >= 1 ? retval : 1;
 }
-

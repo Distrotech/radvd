@@ -134,4 +134,3 @@ int netlink_socket(void)
 
 	return sock;
 }
-
