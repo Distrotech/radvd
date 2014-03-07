@@ -54,8 +54,7 @@ radvd_CPPFLAGS = \
 	@DAEMON_CFLAGS@
 
 radvd_test_CPPFLAGS = \
-	@DAEMON_CFLAGS@ \
-	-D RADVD_TEST
+	@DAEMON_CFLAGS@
 
 noinst_LIBRARIES = libradvd-parser.a
 
@@ -131,7 +130,8 @@ radvd_SOURCES = \
 	process.c \
 	radvd.c \
 	send.c \
-	timer.c
+	timer.c \
+	syscalls.c
 
 radvdump_SOURCES = \
 	defaults.h \
@@ -143,6 +143,7 @@ radvdump_SOURCES = \
 	recv.c \
 	socket.c \
 	util.c \
+	syscalls.c \
 	radvdump.c
 
 ### coverage ###
