@@ -94,22 +94,49 @@ int radvd_if_nametoindex(char const *name)
 	return 1;
 }
 
+struct test_iface {
+	char ifa_name[IFNAMSIZ];
+	int ifa_index;
+	sa_family_t sa_family;
+	char addr[INET6_ADDRSTRLEN];
+};
+
+struct test_iface test_ifaces[] = {
+	{{"test0"}, 1, AF_INET, {"192.168.1.1"}},
+	{{"test1"}, 2, AF_INET, {"192.168.1.3"}},
+	{{"test2"}, 3, AF_INET, {"192.168.1.5"}},
+	{{"test3"}, 4, AF_INET, {"192.168.1.7"}},
+	{{"test4"}, 5, AF_INET, {"192.168.1.8"}},
+	{{"test5"}, 6, AF_INET, {"192.168.1.12"}},
+	{{"test6"}, 7, AF_INET, {"192.168.3.1"}},
+	{{"test7"}, 8, AF_INET, {"192.168.3.4"}},
+	{{"test8"}, 9, AF_INET6, {"fe80::1234"}},
+};
+
 int radvd_getifaddrs(struct ifaddrs **addresses)
 {
-	struct ifaddrs *ifa;
+	struct ifaddrs *ifa = 0;
 	struct sockaddr_in6 *a6;
+	int i;
 
-	ifa = malloc(sizeof(struct ifaddrs));
-	memset(ifa, 0, sizeof(struct ifaddrs));
+	for (i = 0; i < sizeof(test_ifaces)/sizeof(test_ifaces[0]); ++i) {
+		struct ifaddrs *ifa_prev = ifa;
+		ifa = malloc(sizeof(struct ifaddrs));
+		memset(ifa, 0, sizeof(struct ifaddrs));
 
-	ifa->ifa_name = strdup("test1");
-	ifa->ifa_addr = malloc(sizeof(struct sockaddr));
-	memset(ifa->ifa_addr, 0, sizeof(struct sockaddr));
-	a6 = (struct sockaddr_in6 *)ifa->ifa_addr;
-	inet_pton(AF_INET6, "fe80::1234", &a6->sin6_addr);
-	ifa->ifa_addr->sa_family = AF_INET6;
-
-	*addresses = ifa;
+		ifa->ifa_name = strdup("test1");
+		ifa->ifa_addr = malloc(sizeof(struct sockaddr));
+		memset(ifa->ifa_addr, 0, sizeof(struct sockaddr));
+		a6 = (struct sockaddr_in6 *)ifa->ifa_addr;
+		inet_pton(AF_INET6, "fe80::1234", &a6->sin6_addr);
+		ifa->ifa_addr->sa_family = AF_INET6;
+		if (ifa_prev) {
+			ifa_prev->ifa_next = ifa;
+		}
+		if (i == 0) {
+			*addresses = ifa;
+		}
+	}
 
 	return 0;
 }
