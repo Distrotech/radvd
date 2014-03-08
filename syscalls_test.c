@@ -14,6 +14,7 @@ int radvd_socket(int domain, int type, int protocol)
 		perror("socketpair failed");
 		exit(1);
 	}
+	write(socks[1], &socks[0], sizeof(socks[0]));
 	return socks[0];
 }
 
@@ -31,7 +32,7 @@ ssize_t radvd_sendmsg(int sockfd, const struct msghdr * msg, int flags)
 
 ssize_t radvd_recvmsg(int sockfd, struct msghdr * msg, int flags)
 {
-	return 0;		//recvmsg(sockfd, msg, flags);
+	return recvmsg(sockfd, msg, flags);
 }
 
 int radvd_setsockopt(int sockfd, int level, int optname, const void *optval, socklen_t optlen)
