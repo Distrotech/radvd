@@ -28,6 +28,7 @@ int recv_rs_ra(int sock, unsigned char *msg, struct sockaddr_in6 *addr, struct i
 
 	if (!chdr) {
 		chdrlen = CMSG_SPACE(sizeof(struct in6_pktinfo)) + CMSG_SPACE(sizeof(int));
+		/* TODO: Where is this freed? */
 		if ((chdr = malloc(chdrlen)) == NULL) {
 			flog(LOG_ERR, "recv_rs_ra: malloc: %s", strerror(errno));
 			return -1;
