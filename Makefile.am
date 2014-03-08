@@ -16,7 +16,7 @@
 # mumble_CPPFLAGS override AM_CPPFLAGS
 # CPP is C PreProcessor
 
-AUTOMAKE_OPTIONS = 1.2 foreign
+AUTOMAKE_OPTIONS = 1.2 foreign subdir-objects
 
 ###  Compiler flags and such ###
 
