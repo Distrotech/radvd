@@ -25,7 +25,6 @@ int recv_rs_ra(int sock, unsigned char *msg, struct sockaddr_in6 *addr, struct i
 	static unsigned char *chdr = NULL;
 	static unsigned int chdrlen = 0;
 	int len;
-	fd_set rfds;
 
 	if (!chdr) {
 		chdrlen = CMSG_SPACE(sizeof(struct in6_pktinfo)) + CMSG_SPACE(sizeof(int));
@@ -33,16 +32,6 @@ int recv_rs_ra(int sock, unsigned char *msg, struct sockaddr_in6 *addr, struct i
 			flog(LOG_ERR, "recv_rs_ra: malloc: %s", strerror(errno));
 			return -1;
 		}
-	}
-
-	FD_ZERO(&rfds);
-	FD_SET(sock, &rfds);
-
-	if (select(sock + 1, &rfds, NULL, NULL, NULL) < 0) {
-		if (errno != EINTR)
-			flog(LOG_ERR, "select: %s", strerror(errno));
-
-		return -1;
 	}
 
 	iov.iov_len = MSG_SIZE_RECV;
