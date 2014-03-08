@@ -475,8 +475,14 @@ void main_loop(int sock, void *interfaces, char const *conf_file)
 				unsigned char msg[MSG_SIZE_RECV];
 
 				len = recv_rs_ra(sock, msg, &rcv_addr, &pkt_info, &hoplimit);
-				if (len > 0) {
+				if (len > 0 && pkt_info) {
 					process(sock, interfaces, msg, len, &rcv_addr, pkt_info, hoplimit);
+				}
+				else if (!pkt_info) {
+					dlog(LOG_INFO, 4, "recv_rs_ra returned null pkt_info.");
+				}
+				else if (len <= 0) {
+					dlog(LOG_INFO, 4, "recv_rs_ra returned len <= 0: %d", len);
 				}
 			}
 		} else if (rc == 0) {
