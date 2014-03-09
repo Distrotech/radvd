@@ -30,7 +30,7 @@ DEFS = \
 
 ENABLE_WARNINGS = \
 	-Wall \
-	-Wcast-align \
+	-Wno-cast-align \
 	-Wcast-qual \
 	-Wmissing-declarations \
 	-Wmissing-prototypes \
