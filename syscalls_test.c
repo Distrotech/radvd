@@ -194,12 +194,12 @@ int radvd_getifaddrs(struct ifaddrs **addresses)
 		ifa = malloc(sizeof(struct ifaddrs));
 		memset(ifa, 0, sizeof(struct ifaddrs));
 
-		ifa->ifa_name = strdup("test1");
+		ifa->ifa_name = strdup(test_ifaces[i].ifa_name);
 		ifa->ifa_addr = malloc(sizeof(struct sockaddr));
 		memset(ifa->ifa_addr, 0, sizeof(struct sockaddr));
 		a6 = (struct sockaddr_in6 *)ifa->ifa_addr;
-		inet_pton(AF_INET6, "fe80::1234", &a6->sin6_addr);
-		ifa->ifa_addr->sa_family = AF_INET6;
+		inet_pton(test_ifaces[i].sa_family, test_ifaces[i].addr, &a6->sin6_addr);
+		ifa->ifa_addr->sa_family = test_ifaces[i].sa_family;
 		if (ifa_prev) {
 			ifa_prev->ifa_next = ifa;
 		}
