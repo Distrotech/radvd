@@ -7,18 +7,26 @@
 
 static int socks[2];
 
+static void write_something(int fd);
+
+static void write_something(int sock)
+{
+	int i = 0;
+	int rc = write(sock, &i, sizeof(i));
+	if (-1 == rc) {
+		perror("sendmsg failed");
+		exit(1);
+	}	
+}
+
 int radvd_socket(int domain, int type, int protocol)
 {
 	/* type can be SOCK_RAW SOCK_STREAM */
-	if (0 != socketpair(AF_LOCAL, SOCK_STREAM, 0, socks)) {
+	if (0 != socketpair(AF_LOCAL, SOCK_DGRAM, 0, socks)) {
 		perror("socketpair failed");
 		exit(1);
 	}
-	int rc = write(socks[1], &socks[0], sizeof(socks[0]));
-	if (-1 == rc) {
-		perror("write failed");
-		exit(1);
-	}	
+	write_something(socks[1]);
 	return socks[0];
 }
 
