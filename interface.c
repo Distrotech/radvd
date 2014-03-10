@@ -213,7 +213,7 @@ int check_iface(struct Interface *iface)
  */
 void iface_index_changed(struct Interface *iface)
 {
-	*iface->flags = 1;
+	iface->interfaces->flags = 1;
 }
 
 static int compare_by_index(void const *a, void const *b)
@@ -239,6 +239,15 @@ struct Interface *find_iface_by_index(void *interfaces, int index)
 		return 0;
 	}
 	return *item;
+}
+
+void reschedule_iface(struct Interface * iface);
+void reschedule_iface(struct Interface * iface)
+{
+	double next = rand_between(iface->MinRtrAdvInterval, iface->MaxRtrAdvInterval);
+	rb_erase(&iface->rb_node, &iface->interfaces->iface_tree);
+	iface->next_multicast = next_timeval(next);
+	iface_tree_insert(&iface->interfaces->iface_tree, iface);
 }
 
 struct Interface *find_iface_by_time(void *interfaces)

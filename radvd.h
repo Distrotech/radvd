@@ -35,12 +35,19 @@ struct Clients;
 #define HWADDR_MAX 16
 #define USER_HZ 100
 
+struct interfaces {
+	int count;
+	struct Interface *IfaceList;
+	struct rb_root iface_tree;
+	struct Interface **by_index;
+	unsigned int flags;
+};
+
 struct Interface {
 	char Name[IFNAMSIZ];	/* interface name */
 
 	struct in6_addr if_addr;
 	unsigned int if_index;
-	unsigned int *flags;
 
 	uint8_t init_racount;	/* Initial RAs */
 
@@ -96,6 +103,7 @@ struct Interface {
 
 	struct rb_node rb_node;
 	struct Interface *next;
+	struct interfaces * interfaces;
 };
 
 struct Clients {
@@ -204,14 +212,6 @@ struct HomeAgentInfo {
 	uint16_t lifetime;
 };
 
-struct interfaces {
-	int count;
-	struct Interface *IfaceList;
-	struct rb_root iface_tree;
-	struct Interface **by_index;
-	unsigned int flags;
-};
-
 /* Uclibc : include/netinet/icmpv6.h - Added by Bhadram*/
 #define ND_OPT_ARO	33
 #define ND_OPT_6CO	34
@@ -240,6 +240,7 @@ struct nd_opt_6co {
 
 /* gram.y */
 struct interfaces *readin_config(char const *fname);
+int iface_tree_insert(struct rb_root *root, struct Interface *data);
 
 /* radvd.c */
 int check_ip6_forwarding(void);

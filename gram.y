@@ -1147,7 +1147,7 @@ void yyerror(void const * loc, void * vp, char const * msg)
 struct fill_by_indexer {
 	struct Interface ** array;
 	int index;
-	unsigned int * flags;
+	struct interfaces * interfaces;
 };
 
 void fill_by_index(struct Interface * iface, void * data);
@@ -1155,10 +1155,9 @@ void fill_by_index(struct Interface * iface, void * data)
 {
 	struct fill_by_indexer * fbi = (struct fill_by_indexer *)data;
 	fbi->array[fbi->index++] = iface;
-	iface->flags = fbi->flags;
+	iface->interfaces = fbi->interfaces;
 }
 
-int iface_tree_insert(struct rb_root *root, struct Interface *data);
 int iface_tree_insert(struct rb_root *root, struct Interface *data)
 {
   	struct rb_node **new = &(root->rb_node), *parent = NULL;
@@ -1249,7 +1248,7 @@ struct interfaces * readin_config(char const *fname)
 				flog(LOG_ERR, "Unable to allocate memory for %d interfaces", yydata.interface_count);
 				exit(1);
 			}
-			struct fill_by_indexer fbi = {interfaces->by_index, 0, &interfaces->flags};
+			struct fill_by_indexer fbi = {interfaces->by_index, 0, interfaces};
 			for_each_iface(interfaces, fill_by_index, &fbi);
 			for_each_iface(interfaces, build_tree, &interfaces->iface_tree);
 			interfaces->count = yydata.interface_count;
