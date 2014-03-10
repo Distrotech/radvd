@@ -131,7 +131,7 @@ int radvd_ioctl(int d, int request, void *p)
 
 char *radvd_if_indextoname(int index, char *name)
 {
-	strcpy("test1", name);
+	strcpy(name, "test1");
 	return "test1";
 }
 
