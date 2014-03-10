@@ -11,7 +11,8 @@ static void write_something(int fd);
 
 static void write_something(int sock)
 {
-	int i = 0;
+	struct icmp6_hdr i;
+	memset(&i, 0, sizeof(0));
 	int rc = write(sock, &i, sizeof(i));
 	if (-1 == rc) {
 		perror("sendmsg failed");
@@ -50,13 +51,13 @@ ssize_t radvd_recvmsg(int sockfd, struct msghdr * mhdr, int flags)
 	mhdr.msg_control = (void *)chdr;
 	mhdr.msg_controllen = chdrlen;
 #endif
-	char __attribute__ ((aligned(8))) chdr[CMSG_SPACE(sizeof(struct in6_pktinfo))];
+	static char __attribute__ ((aligned(8))) chdr[CMSG_SPACE(sizeof(struct in6_pktinfo))];
 	struct in6_pktinfo *pkt_info;
 	struct cmsghdr *cmsg;
 	struct sockaddr_in6 addr;
-	uint8_t if_addr[] = { 0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 };
+	uint8_t if_addr[] = { 0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 };
 
-	int if_index = 1;
+	int if_index = 9;
 
 	memset(chdr, 0, sizeof(chdr));
 	cmsg = (struct cmsghdr *)chdr;
