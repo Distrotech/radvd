@@ -62,11 +62,23 @@ int log_open(int method, char const *ident, char const *log, int facility)
 }
 
 /* note: [dfv]log() is also called from root context */
-static int vlog(int prio, char const *format, va_list ap)
+static int vlog(int prio, int level, char const *format, va_list ap)
 {
 	char tstamp[64], buff[1024];
 	struct tm *tm;
 	time_t current;
+#define DEBUGLOGS 1
+#ifdef DEBUGLOGS
+	char const * levelstr[] = {
+		"",
+		" ",
+		"  ",
+		"   ",
+		"    ",
+		"     ",
+		"      ",
+	};
+#endif
 
 	vsnprintf(buff, sizeof(buff), format, ap);
 
@@ -84,8 +96,15 @@ static int vlog(int prio, char const *format, va_list ap)
 		current = time(NULL);
 		tm = localtime(&current);
 		(void)strftime(tstamp, sizeof(tstamp), LOG_TIME_FORMAT, tm);
-
-		fprintf(stderr, "[%s] %s (%d): %s\n", tstamp, log_ident, getpid(), buff);
+		fprintf(stderr, "[%s] %s (%d): "
+#ifdef DEBUGLOGS
+			"<%d>%s"
+#endif
+			"%s\n", tstamp, log_ident, getpid(),
+#ifdef DEBUGLOGS
+			prio, levelstr[level],
+#endif
+			buff);
 		fflush(stderr);
 		break;
 	case L_LOGFILE:
@@ -112,7 +131,7 @@ void dlog(int prio, int level, char const *format, ...)
 		return;
 
 	va_start(ap, format);
-	vlog(prio, format, ap);
+	vlog(prio, level, format, ap);
 	va_end(ap);
 }
 
@@ -121,7 +140,7 @@ void flog(int prio, char const *format, ...)
 	va_list ap;
 
 	va_start(ap, format);
-	vlog(prio, format, ap);
+	vlog(prio, 1, format, ap);
 	va_end(ap);
 }
 
