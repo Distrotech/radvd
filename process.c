@@ -90,6 +90,7 @@ void process(int sock, struct interfaces *interfaces, unsigned char *msg, int le
 	iface = find_iface_by_index(interfaces, pkt_info->ipi6_ifindex);
 
 	if (iface == NULL) {
+		flog(LOG_WARNING, "received icmpv6 RS/RA packet on an unknown interface with index %d", pkt_info->ipi6_ifindex);
 		return;
 	}
 

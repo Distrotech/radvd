@@ -11,9 +11,10 @@ static void write_something(int fd);
 
 static void write_something(int sock)
 {
-	struct icmp6_hdr i;
-	memset(&i, 0, sizeof(0));
-	int rc = write(sock, &i, sizeof(i));
+	struct icmp6_hdr icmph;
+	memset(&icmph, 0, sizeof(0));
+	icmph.icmp6_type = ND_ROUTER_SOLICIT;
+	int rc = write(sock, &icmph, sizeof(icmph));
 	if (-1 == rc) {
 		perror("sendmsg failed");
 		exit(1);
@@ -54,10 +55,9 @@ ssize_t radvd_recvmsg(int sockfd, struct msghdr * mhdr, int flags)
 	static char __attribute__ ((aligned(8))) chdr[CMSG_SPACE(sizeof(struct in6_pktinfo))];
 	struct in6_pktinfo *pkt_info;
 	struct cmsghdr *cmsg;
-	struct sockaddr_in6 addr;
 	uint8_t if_addr[] = { 0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 };
 
-	int if_index = 9;
+	int if_index = 2;
 
 	memset(chdr, 0, sizeof(chdr));
 	cmsg = (struct cmsghdr *)chdr;
@@ -68,15 +68,16 @@ ssize_t radvd_recvmsg(int sockfd, struct msghdr * mhdr, int flags)
 
 	pkt_info = (struct in6_pktinfo *)CMSG_DATA(cmsg);
 	pkt_info->ipi6_ifindex = if_index;
-	memcpy(&pkt_info->ipi6_addr, &if_addr, sizeof(struct in6_addr));
-
-#ifdef HAVE_SIN6_SCOPE_ID
-	if (IN6_IS_ADDR_LINKLOCAL(&addr.sin6_addr) || IN6_IS_ADDR_MC_LINKLOCAL(&addr.sin6_addr))
-		addr.sin6_scope_id = if_index;
-#endif
 
 	mhdr->msg_control = (void *)cmsg;
 	mhdr->msg_controllen = sizeof(chdr);
+
+	struct sockaddr_in6 * addr = (struct sockaddr_in6*)mhdr->msg_name;
+
+	memset((void *)addr, 0, sizeof(*addr));
+	addr->sin6_family = AF_INET6;
+	addr->sin6_port = htons(IPPROTO_ICMPV6);
+	memcpy(&addr->sin6_addr, if_addr, sizeof(if_addr));
 
 	return rc;
 }
@@ -136,11 +137,6 @@ char *radvd_if_indextoname(int index, char *name)
 	return "test1";
 }
 
-int radvd_if_nametoindex(char const *name)
-{
-	return 1;
-}
-
 struct test_iface {
 	char ifa_name[IFNAMSIZ];
 	int ifa_index;
@@ -151,14 +147,25 @@ struct test_iface {
 struct test_iface test_ifaces[] = {
 	{{"test0"}, 1, AF_INET, {"192.168.1.1"}},
 	{{"test1"}, 2, AF_INET, {"192.168.1.3"}},
+	{{"test1"}, 2, AF_INET6, {"fe80::1234"}},
 	{{"test2"}, 3, AF_INET, {"192.168.1.5"}},
 	{{"test3"}, 4, AF_INET, {"192.168.1.7"}},
 	{{"test4"}, 5, AF_INET, {"192.168.1.8"}},
 	{{"test5"}, 6, AF_INET, {"192.168.1.12"}},
 	{{"test6"}, 7, AF_INET, {"192.168.3.1"}},
 	{{"test7"}, 8, AF_INET, {"192.168.3.4"}},
-	{{"test8"}, 9, AF_INET6, {"fe80::1234"}},
 };
+
+int radvd_if_nametoindex(char const *name)
+{
+	int i;
+	for (i = 0; i < sizeof(test_ifaces)/sizeof(test_ifaces[0]); ++i) {
+		if (0 == strcmp(test_ifaces[i].ifa_name, name)) {
+			return test_ifaces[i].ifa_index;
+		}
+	}
+	return 0;
+}
 
 int radvd_getifaddrs(struct ifaddrs **addresses)
 {
