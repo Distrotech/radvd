@@ -42,14 +42,41 @@ ssize_t radvd_sendmsg(int sockfd, const struct msghdr * msg, int flags)
 	return 0;		//sendmsg(sockfd, msg, flags);
 }
 
-ssize_t radvd_recvmsg(int sockfd, struct msghdr * msg, int flags)
+ssize_t radvd_recvmsg(int sockfd, struct msghdr * mhdr, int flags)
 {
-	int rc = recvmsg(sockfd, msg, flags);
+	int rc = recvmsg(sockfd, mhdr, flags);
 #if 0
 	/* TODO: override these for recv.c */
 	mhdr.msg_control = (void *)chdr;
 	mhdr.msg_controllen = chdrlen;
 #endif
+	char __attribute__ ((aligned(8))) chdr[CMSG_SPACE(sizeof(struct in6_pktinfo))];
+	struct in6_pktinfo *pkt_info;
+	struct cmsghdr *cmsg;
+	struct sockaddr_in6 addr;
+	uint8_t if_addr[] = { 0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 };
+
+	int if_index = 1;
+
+	memset(chdr, 0, sizeof(chdr));
+	cmsg = (struct cmsghdr *)chdr;
+
+	cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_pktinfo));
+	cmsg->cmsg_level = IPPROTO_IPV6;
+	cmsg->cmsg_type = IPV6_PKTINFO;
+
+	pkt_info = (struct in6_pktinfo *)CMSG_DATA(cmsg);
+	pkt_info->ipi6_ifindex = if_index;
+	memcpy(&pkt_info->ipi6_addr, &if_addr, sizeof(struct in6_addr));
+
+#ifdef HAVE_SIN6_SCOPE_ID
+	if (IN6_IS_ADDR_LINKLOCAL(&addr.sin6_addr) || IN6_IS_ADDR_MC_LINKLOCAL(&addr.sin6_addr))
+		addr.sin6_scope_id = if_index;
+#endif
+
+	mhdr->msg_control = (void *)cmsg;
+	mhdr->msg_controllen = sizeof(chdr);
+
 	return rc;
 }
 
