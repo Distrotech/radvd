@@ -31,7 +31,7 @@ void process(int sock, struct interfaces *interfaces, unsigned char *msg, int le
 
 	addrtostr(&addr->sin6_addr, addr_str, sizeof(addr_str));
 
-	if_name = if_indextoname(pkt_info->ipi6_ifindex, if_namebuf);
+	if_name = radvd_if_indextoname(pkt_info->ipi6_ifindex, if_namebuf);
 	if (!if_name) {
 		if_name = "unknown";
 	}
