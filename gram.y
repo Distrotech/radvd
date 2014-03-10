@@ -29,6 +29,8 @@ static void yyerror(void const * loc, void * vp, char const * s);
 #include "includes.h"
 #include "radvd.h"
 #include "defaults.h"
+#include "rbtree.h"
+#include "stddef.h"
 
 static int countbits(int b);
 static int count_mask(struct sockaddr_in6 *m);
@@ -1157,6 +1159,61 @@ void fill_by_index(struct Interface * iface, void * data)
 	iface->flags = fbi->flags;
 }
 
+#define container_of(ptr, type, member) ({                      \
+        const typeof( ((type *)0)->member ) *__mptr = (ptr);    \
+        (type *)( (char *)__mptr - offsetof(type,member) );})
+int iface_tree_insert(struct rb_root *root, struct Interface *data);
+int iface_tree_insert(struct rb_root *root, struct Interface *data)
+{
+  	struct rb_node **new = &(root->rb_node), *parent = NULL;
+
+  	/* Figure out where to put new node */
+  	while (*new) {
+  		struct Interface *this = container_of(*new, struct Interface, rb_node);
+  		int result = timevaldiff(&data->next_multicast, &this->next_multicast);
+
+		parent = *new;
+  		if (result <= 0)
+  			new = &((*new)->rb_left);
+  		else
+  			new = &((*new)->rb_right);
+  	}
+
+  	/* Add new node and rebalance tree. */
+  	rb_link_node(&data->rb_node, parent, new);
+  	rb_insert_color(&data->rb_node, root);
+
+	return 0;
+}
+
+
+struct Interface *my_search(struct rb_root *root, struct timeval *tv);
+struct Interface *my_search(struct rb_root *root, struct timeval *tv)
+{
+  	struct rb_node *node = root->rb_node;
+
+  	while (node) {
+  		struct Interface *data = container_of(node, struct Interface, rb_node);
+  		int result = timevaldiff(&data->next_multicast, tv);
+
+		if (result < 0)
+  			node = node->rb_left;
+		else if (result > 0)
+  			node = node->rb_right;
+		else
+  			return data;
+	}
+	return NULL;
+}
+
+
+void build_tree(struct Interface * iface, void * data);
+void build_tree(struct Interface * iface, void * data)
+{
+	struct rb_root * iface_tree = (struct rb_root*)data;
+	iface_tree_insert(iface_tree, iface);
+}
+
 struct interfaces * readin_config(char const *fname)
 {
 	struct interfaces * interfaces = 0;
@@ -1189,6 +1246,7 @@ struct interfaces * readin_config(char const *fname)
 				exit(1);
 			}
 			memset(interfaces, 0, sizeof(struct interfaces));
+			interfaces->iface_tree = RB_ROOT;
 			interfaces->IfaceList = yydata.IfaceList;
 			interfaces->by_index = malloc(yydata.interface_count * sizeof(struct Interface*));
 			if (!interfaces->by_index) {
@@ -1197,6 +1255,7 @@ struct interfaces * readin_config(char const *fname)
 			}
 			struct fill_by_indexer fbi = {interfaces->by_index, 0, &interfaces->flags};
 			for_each_iface(interfaces, fill_by_index, &fbi);
+			for_each_iface(interfaces, build_tree, &interfaces->iface_tree);
 			interfaces->count = yydata.interface_count;
 			interfaces->flags = 1;
 		}

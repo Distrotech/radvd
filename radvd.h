@@ -19,6 +19,7 @@
 #include "includes.h"
 #include "defaults.h"
 #include "log.h"
+#include "rbtree.h"
 
 #define CONTACT_EMAIL	"Reuben Hawkins <reubenhwk@gmail.com>"
 
@@ -89,6 +90,7 @@ struct Interface {
 	/* Info whether this interface has been initialized successfully */
 	int ready;
 
+	struct rb_node rb_node;
 	struct Interface *next;
 };
 
@@ -201,6 +203,7 @@ struct HomeAgentInfo {
 struct interfaces {
 	int count;
 	struct Interface *IfaceList;
+	struct rb_root iface_tree;
 	struct Interface **by_index;
 	unsigned int flags;
 };

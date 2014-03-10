@@ -31,7 +31,7 @@ DEFS = \
 ENABLE_WARNINGS = \
 	-Wall \
 	-Wno-cast-align \
-	-Wcast-qual \
+	-Wno-cast-qual \
 	-Wmissing-declarations \
 	-Wmissing-prototypes \
 	-Wpointer-arith \
@@ -91,6 +91,8 @@ EXTRA_radvd_test_SOURCES = \
 	privsep-linux.c
 
 radvd_test_SOURCES = \
+	rbtree.h \
+	rbtree.c \
 	defaults.h \
 	includes.h \
 	log.c \
@@ -116,6 +118,8 @@ EXTRA_radvd_SOURCES = \
 	privsep-linux.c
 
 radvd_SOURCES = \
+	rbtree.h \
+	rbtree.c \
 	defaults.h \
 	includes.h \
 	log.c \
