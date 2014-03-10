@@ -14,7 +14,11 @@ int radvd_socket(int domain, int type, int protocol)
 		perror("socketpair failed");
 		exit(1);
 	}
-	write(socks[1], &socks[0], sizeof(socks[0]));
+	int rc = write(socks[1], &socks[0], sizeof(socks[0]));
+	if (-1 == rc) {
+		perror("write failed");
+		exit(1);
+	}	
 	return socks[0];
 }
 
