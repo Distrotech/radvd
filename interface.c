@@ -260,6 +260,13 @@ struct Interface *find_iface_by_time(void *interfaces)
 			}
 		}
 	}
+
+	struct rb_node *node;
+	for (node = rb_first(&ifaces->iface_tree); node; node = rb_next(node))
+		printf("key=%d,name=%s\n", 
+			(int)rb_entry(node, struct Interface, rb_node)->next_multicast.tv_sec,
+			(char*)rb_entry(node, struct Interface, rb_node)->Name);
+
 	return needle;
 }
 

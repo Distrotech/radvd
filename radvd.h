@@ -19,11 +19,15 @@
 #include "includes.h"
 #include "defaults.h"
 #include "log.h"
+#include "stddef.h"
 #include "rbtree.h"
 
 #define CONTACT_EMAIL	"Reuben Hawkins <reubenhwk@gmail.com>"
 
 #define min(a,b)	(((a) < (b)) ? (a) : (b))
+#define container_of(ptr, type, member) ({                      \
+        const typeof( ((type *)0)->member ) *__mptr = (ptr);    \
+        (type *)( (char *)__mptr - offsetof(type,member) );})
 
 struct AdvPrefix;
 struct Clients;

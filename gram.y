@@ -30,7 +30,6 @@ static void yyerror(void const * loc, void * vp, char const * s);
 #include "radvd.h"
 #include "defaults.h"
 #include "rbtree.h"
-#include "stddef.h"
 
 static int countbits(int b);
 static int count_mask(struct sockaddr_in6 *m);
@@ -1159,9 +1158,6 @@ void fill_by_index(struct Interface * iface, void * data)
 	iface->flags = fbi->flags;
 }
 
-#define container_of(ptr, type, member) ({                      \
-        const typeof( ((type *)0)->member ) *__mptr = (ptr);    \
-        (type *)( (char *)__mptr - offsetof(type,member) );})
 int iface_tree_insert(struct rb_root *root, struct Interface *data);
 int iface_tree_insert(struct rb_root *root, struct Interface *data)
 {
