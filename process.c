@@ -162,6 +162,7 @@ static void process_rs(int sock, struct Interface *iface, unsigned char *msg, in
 		/* last RA was sent only a few moments ago, don't send another immediately. */
 		next =
 		    iface->MinDelayBetweenRAs - (tv.tv_sec + tv.tv_usec / 1000000.0) + (iface->last_multicast.tv_sec + iface->last_multicast.tv_usec / 1000000.0) + delay / 1000.0;
+		dlog(LOG_DEBUG, 5, "rate limiting RA's on %s, rescheduling RA %f seconds from now", iface->Name, next);
 		iface->next_multicast = next_timeval(next);
 	} else {
 		/* no RA sent in a while, send a multicast reply */
@@ -169,6 +170,7 @@ static void process_rs(int sock, struct Interface *iface, unsigned char *msg, in
 		next = rand_between(iface->MinRtrAdvInterval, iface->MaxRtrAdvInterval);
 		iface->next_multicast = next_timeval(next);
 	}
+	dlog(LOG_DEBUG, 2, "processed RS on %s", iface->Name);
 }
 
 /*
@@ -380,6 +382,7 @@ static void process_ra(struct Interface *iface, unsigned char *msg, int len, str
 		len -= optlen;
 		opt_str += optlen;
 	}
+	dlog(LOG_DEBUG, 2, "processed RA on %s", iface->Name);
 }
 
 static int addr_match(struct in6_addr *a1, struct in6_addr *a2, int prefixlen)
