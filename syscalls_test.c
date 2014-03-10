@@ -36,7 +36,13 @@ ssize_t radvd_sendmsg(int sockfd, const struct msghdr * msg, int flags)
 
 ssize_t radvd_recvmsg(int sockfd, struct msghdr * msg, int flags)
 {
-	return recvmsg(sockfd, msg, flags);
+	int rc = recvmsg(sockfd, msg, flags);
+#if 0
+	/* TODO: override these for recv.c */
+	mhdr.msg_control = (void *)chdr;
+	mhdr.msg_controllen = chdrlen;
+#endif
+	return rc;
 }
 
 int radvd_setsockopt(int sockfd, int level, int optname, const void *optval, socklen_t optlen)
