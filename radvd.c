@@ -444,7 +444,7 @@ void main_loop(int sock, void *interfaces, char const *conf_file)
 			timeout = -1;	/* negative timeout means poll waits forever for IO or a signal */
 		}
 
-		dlog(LOG_DEBUG, 5, "polling for %g seconds. Next iface is %s.", timeout / 1000.0, next_iface_to_expire->Name);
+		dlog(LOG_DEBUG, 1, "polling for %g seconds. Next iface is %s.", timeout / 1000.0, next_iface_to_expire->Name);
 
 		ts.tv_sec = timeout / 1000;
 		ts.tv_nsec = (timeout - 1000 * ts.tv_sec) * 1000000;
@@ -521,7 +521,7 @@ void timer_handler(int sock, struct Interface *iface)
 {
 	double next;
 
-	dlog(LOG_DEBUG, 4, "timer_handler called for %s", iface->Name);
+	dlog(LOG_DEBUG, 1, "timer_handler called for %s", iface->Name);
 
 	if (send_ra_forall(sock, iface, NULL) != 0) {
 		dlog(LOG_DEBUG, 4, "send_ra_forall failed on interface %s", iface->Name);
