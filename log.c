@@ -67,7 +67,6 @@ static int vlog(int prio, int level, char const *format, va_list ap)
 	char tstamp[64], buff[1024];
 	struct tm *tm;
 	time_t current;
-#define DEBUGLOGS 1
 #ifdef DEBUGLOGS
 	char const * levelstr[] = {
 		"",
