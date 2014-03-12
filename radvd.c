@@ -529,11 +529,6 @@ void timer_handler(int sock, struct Interface *iface)
 
 	next = rand_between(iface->MinRtrAdvInterval, iface->MaxRtrAdvInterval);
 
-	if (iface->init_racount < MAX_INITIAL_RTR_ADVERTISEMENTS) {
-		iface->init_racount++;
-		next = min(MAX_INITIAL_RTR_ADVERT_INTERVAL, next);
-	}
-
 	reschedule_iface(iface, next);
 }
 
@@ -569,10 +564,8 @@ void kickoff_adverts(int sock, struct Interface *iface)
 		dlog(LOG_DEBUG, 4, "send_ra_forall failed on interface %s", iface->Name);
 	}
 
-	iface->init_racount++;
-
 	next = min(MAX_INITIAL_RTR_ADVERT_INTERVAL, iface->MaxRtrAdvInterval);
-	reschedule_iface(iface, MAX_INITIAL_RTR_ADVERT_INTERVAL);
+	reschedule_iface(iface, next);
 }
 
 void stop_advert_foo(struct Interface *iface, void *data)

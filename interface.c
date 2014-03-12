@@ -265,6 +265,10 @@ struct Interface *find_iface_by_time(void *interfaces)
 
 void reschedule_iface(struct Interface * iface, double next)
 {
+	if (iface->racount < MAX_INITIAL_RTR_ADVERTISEMENTS) {
+		next = min(MAX_INITIAL_RTR_ADVERT_INTERVAL, iface->MaxRtrAdvInterval);
+	}
+
 	iface->_next_multicast = next_timeval(next);
 }
 

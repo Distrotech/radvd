@@ -37,7 +37,7 @@ struct Interface {
 	unsigned int if_index;
 	unsigned int *flags;
 
-	uint8_t init_racount;	/* Initial RAs */
+	uint8_t racount;	/* Initial RAs */
 
 	uint8_t if_hwaddr[HWADDR_MAX];
 	int if_hwaddr_len;

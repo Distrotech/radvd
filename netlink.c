@@ -82,7 +82,7 @@ int process_netlink_msg(int sock)
 			 * don't really need to do that.  We can just reinit the interfaces which need it. */
 			iface = find_iface_by_index(IfaceList, ifinfo->ifi_index);
 			if (iface) {
-				iface->init_racount = 0;
+				iface->racount = 0;
 				rechedule_iface(iface);
 			}
 #endif
