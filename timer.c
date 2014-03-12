@@ -39,6 +39,6 @@ int next_time_msec(struct Interface const *iface)
 	struct timeval tv;
 	int retval;
 	gettimeofday(&tv, NULL);
-	retval = timevaldiff(&iface->next_multicast, &tv);
+	retval = timevaldiff(&iface->_next_multicast, &tv);
 	return retval >= 1 ? retval : 1;
 }

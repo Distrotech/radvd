@@ -534,7 +534,7 @@ void timer_handler(int sock, struct Interface *iface)
 		next = min(MAX_INITIAL_RTR_ADVERT_INTERVAL, next);
 	}
 
-	iface->next_multicast = next_timeval(next);
+	reschedule_iface(iface, next);
 }
 
 void config_interface(struct Interface *iface)
@@ -572,7 +572,7 @@ void kickoff_adverts(int sock, struct Interface *iface)
 	iface->init_racount++;
 
 	next = min(MAX_INITIAL_RTR_ADVERT_INTERVAL, iface->MaxRtrAdvInterval);
-	iface->next_multicast = next_timeval(next);
+	reschedule_iface(iface, MAX_INITIAL_RTR_ADVERT_INTERVAL);
 }
 
 void stop_advert_foo(struct Interface *iface, void *data)

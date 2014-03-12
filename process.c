@@ -163,12 +163,12 @@ static void process_rs(int sock, struct Interface *iface, unsigned char *msg, in
 		next =
 		    iface->MinDelayBetweenRAs - (tv.tv_sec + tv.tv_usec / 1000000.0) + (iface->last_multicast.tv_sec + iface->last_multicast.tv_usec / 1000000.0) + delay / 1000.0;
 		dlog(LOG_DEBUG, 5, "rate limiting RA's on %s, rescheduling RA %f seconds from now", iface->Name, next);
-		iface->next_multicast = next_timeval(next);
+		reschedule_iface(iface, next);
 	} else {
 		/* no RA sent in a while, send a multicast reply */
 		send_ra_forall(sock, iface, NULL);
 		next = rand_between(iface->MinRtrAdvInterval, iface->MaxRtrAdvInterval);
-		iface->next_multicast = next_timeval(next);
+		reschedule_iface(iface, next);
 	}
 	dlog(LOG_DEBUG, 2, "processed RS on %s", iface->Name);
 }

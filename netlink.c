@@ -83,7 +83,7 @@ int process_netlink_msg(int sock)
 			iface = find_iface_by_index(IfaceList, ifinfo->ifi_index);
 			if (iface) {
 				iface->init_racount = 0;
-				iface->next_multicast = next_timeval(0);
+				rechedule_iface(iface);
 			}
 #endif
 

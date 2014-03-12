@@ -263,6 +263,11 @@ struct Interface *find_iface_by_time(void *interfaces)
 	return needle;
 }
 
+void reschedule_iface(struct Interface * iface, double next)
+{
+	iface->_next_multicast = next_timeval(next);
+}
+
 void for_each_iface(void *interfaces, void (*foo) (struct Interface *, void *), void *data)
 {
 	struct interfaces *ifaces = (struct interfaces *)interfaces;

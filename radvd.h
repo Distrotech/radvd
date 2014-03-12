@@ -84,7 +84,7 @@ struct Interface {
 	struct AdvDNSSL *AdvDNSSLList;
 	struct Clients *ClientList;
 	struct timeval last_multicast;
-	struct timeval next_multicast;
+	struct timeval _next_multicast;
 
 	/* Info whether this interface has been initialized successfully */
 	int ready;
@@ -270,6 +270,7 @@ struct Interface *find_iface_by_index(void *interfaces, int index);
 struct Interface *find_iface_by_time(void *interfaces);
 void for_each_iface(void *interfaces, void (*foo) (struct Interface *, void *), void *data);
 void free_iface_list(struct Interface *iface);
+void reschedule_iface(struct Interface * iface, double next);
 void free_ifaces(void *interfaces);
 
 /* socket.c */
