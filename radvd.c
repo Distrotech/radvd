@@ -57,7 +57,6 @@ static struct option prog_opt[] = {
 	{"chrootdir", 1, 0, 't'},
 	{"version", 0, 0, 'v'},
 	{"help", 0, 0, 'h'},
-	{"singleprocess", 0, 0, 's'},
 	{"nodaemon", 0, 0, 'n'},
 	{NULL, 0, 0, 0}
 };
@@ -127,7 +126,7 @@ int main(int argc, char *argv[])
 	daemon_pid_file_ident = PATH_RADVD_PID;	/* libdaemon defines daemon_pid_file_ident */
 
 	/* parse args */
-#define OPTIONS_STR "d:C:l:m:p:t:u:vhcsn"
+#define OPTIONS_STR "d:C:l:m:p:t:u:vhcn"
 #ifdef HAVE_GETOPT_LONG
 	while ((c = getopt_long(argc, argv, OPTIONS_STR, prog_opt, &opt_idx)) > 0)
 #else
@@ -178,9 +177,6 @@ int main(int argc, char *argv[])
 			break;
 		case 'c':
 			configtest = 1;
-			break;
-		case 's':
-			fprintf(stderr, "privsep is not optional.  This options will be removed in a near future release.");
 			break;
 		case 'n':
 			daemonize = 0;
