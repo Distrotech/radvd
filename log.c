@@ -62,6 +62,7 @@ int log_open(int method, char const *ident, char const *log, int facility)
 }
 
 /* note: [dfv]log() is also called from root context */
+__attribute__ ((format (printf, 2, 0)))
 static int vlog(int prio, char const *format, va_list ap)
 {
 	char tstamp[64], buff[1024];
