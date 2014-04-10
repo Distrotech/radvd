@@ -975,7 +975,7 @@ abrohead	: T_ABRO IPV6ADDR '/' NUMBER
 			if ($4 > MAX_PrefixLen)
 			{
 				/* TODO: print the locations. */
-				flog(LOG_ERR, "invalid abro prefix length in %s");
+				flog(LOG_ERR, "invalid abro prefix length %d", $4);
 				ABORT;
 			}
 

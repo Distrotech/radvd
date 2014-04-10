@@ -95,7 +95,7 @@ void process(int sock, struct interfaces *interfaces, unsigned char *msg, int le
 	}
 
 	if (!iface->ready && (0 != setup_iface(sock, iface))) {
-		flog(LOG_WARNING, "received RS or RA on %d but %d is not ready and setup_iface failed", iface->Name, iface->Name);
+		flog(LOG_WARNING, "received RS or RA on %s but %s is not ready and setup_iface failed", iface->Name, iface->Name);
 		return;
 	}
 
