@@ -1,3 +1,6 @@
+2014/04/10	2.0.0-alpha6
+		format string checks
+
 2014/03/07	2.0.0-alpha5
 		log valid and preferred lifetimes
 		clean up sllao code and test
