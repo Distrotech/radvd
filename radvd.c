@@ -453,7 +453,7 @@ void main_loop(int sock, void *interfaces, char const *conf_file)
 			if (fds[1].revents & (POLLERR | POLLHUP | POLLNVAL)) {
 				flog(LOG_WARNING, "socket error on fds[1].fd");
 			} else if (fds[1].revents & POLLIN) {
-				if (process_netlink_msg(fds[1].fd) > 0) {
+				if (process_netlink_msg(fds[1].fd, interfaces) > 0) {
 					/* TODO: This is still a bit coarse.  We used to reload the
 					 * whole config file here, which was overkill.  Now we're just
 					 * resetting up the ifaces.  Can we get it down to setting up

@@ -32,7 +32,7 @@
 #define SOL_NETLINK	270
 #endif
 
-int process_netlink_msg(int sock)
+int process_netlink_msg(int sock, void * interfaces)
 {
 	int len;
 	char buf[4096];
@@ -78,16 +78,12 @@ int process_netlink_msg(int sock)
 				}
 			}
 
-#if 0
-			/* TODO: This block of code can make the netlink messages finer grained.  Right now
-			 * we just check the return value of this function and reload the whole config.  We
-			 * don't really need to do that.  We can just reinit the interfaces which need it. */
-			iface = find_iface_by_index(IfaceList, ifinfo->ifi_index);
+			 /* Reinit the interfaces which needs it. */
+			struct Interface * iface = find_iface_by_index(interfaces, ifinfo->ifi_index);
 			if (iface) {
 				iface->racount = 0;
-				rechedule_iface(iface);
+				reschedule_iface(iface, 0);
 			}
-#endif
 
 		} else if (nh->nlmsg_type == RTM_NEWADDR) {
 			struct ifaddrmsg *ifaddr = (struct ifaddrmsg *)NLMSG_DATA(nh);
@@ -95,12 +91,18 @@ int process_netlink_msg(int sock)
 
 			dlog(LOG_DEBUG, 3, "%s, ifindex %d, new address", ifname, ifaddr->ifa_index);
 
-			/* TODO: enable this (can lead to an infinite loop at the moment when we accept RAs on an interface we advertise on,
-			   as we get a RTM_NEWADDR event every time a router advertisement is received on an interface that accepts them,
-			   and process_netlink_msg currently triggers kickoff_adverts)
+			/* TODO: enable this (can lead to an infinite loop at the moment when we accept RAs on an interface
+ 			 * we advertise on, as we get a RTM_NEWADDR event every time a router advertisement is received on
+ 			 * an interface that accepts them, and process_netlink_msg currently triggers kickoff_adverts)
 			 */
 #if 0
 			++rc;
+
+			iface = find_iface_by_index(IfaceList, ifinfo->ifi_index);
+			if (iface) {
+				iface->racount = 0;
+				reschedule_iface(iface, 0);
+			}
 #endif
 		}
 	}
