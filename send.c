@@ -284,8 +284,10 @@ int send_ra(int sock, struct Interface *iface, struct in6_addr *dest)
 
 			memcpy(&pinfo->nd_opt_pi_prefix, &prefix->Prefix, sizeof(struct in6_addr));
 			addrtostr(&prefix->Prefix, addr_str, sizeof(addr_str));
-			dlog(LOG_DEBUG, 5, "adding prefix %s to advert for %s with %u seconds(s) valid lifetime and %u seconds(s) preferred time",
-			     addr_str, iface->Name, ntohl(pinfo->nd_opt_pi_valid_time), ntohl(pinfo->nd_opt_pi_preferred_time));
+			dlog(LOG_DEBUG, 5,
+			     "adding prefix %s to advert for %s with %u seconds(s) valid lifetime and %u seconds(s) preferred time",
+			     addr_str, iface->Name, ntohl(pinfo->nd_opt_pi_valid_time),
+			     ntohl(pinfo->nd_opt_pi_preferred_time));
 		}
 
 		prefix = prefix->next;
@@ -365,7 +367,8 @@ int send_ra(int sock, struct Interface *iface, struct in6_addr *dest)
 		dnsslinfo = (struct nd_opt_dnssl_info_local *)(buff + len);
 
 		send_ra_inc_len(&len, sizeof(dnsslinfo->nd_opt_dnssli_type) +
-				sizeof(dnsslinfo->nd_opt_dnssli_len) + sizeof(dnsslinfo->nd_opt_dnssli_reserved) + sizeof(dnsslinfo->nd_opt_dnssli_lifetime)
+				sizeof(dnsslinfo->nd_opt_dnssli_len) + sizeof(dnsslinfo->nd_opt_dnssli_reserved) +
+				sizeof(dnsslinfo->nd_opt_dnssli_lifetime)
 		    );
 
 		dnsslinfo->nd_opt_dnssli_type = ND_OPT_DNSSL_INFORMATION;
@@ -473,7 +476,9 @@ int send_ra(int sock, struct Interface *iface, struct in6_addr *dest)
 	 * Dynamic Home Agent Address Discovery
 	 */
 
-	if (iface->AdvHomeAgentInfo && (iface->AdvMobRtrSupportFlag || iface->HomeAgentPreference != 0 || iface->HomeAgentLifetime != iface->AdvDefaultLifetime)) {
+	if (iface->AdvHomeAgentInfo
+	    && (iface->AdvMobRtrSupportFlag || iface->HomeAgentPreference != 0
+		|| iface->HomeAgentLifetime != iface->AdvDefaultLifetime)) {
 		struct HomeAgentInfo ha_info;
 		ha_info.type = ND_OPT_HOME_AGENT_INFO;
 		ha_info.length = 1;
@@ -540,7 +545,8 @@ int send_ra(int sock, struct Interface *iface, struct in6_addr *dest)
 	return 0;
 }
 
-int really_send(int sock, struct in6_addr const *dest, unsigned int if_index, struct in6_addr if_addr, unsigned char *buff, size_t len)
+int really_send(int sock, struct in6_addr const *dest, unsigned int if_index, struct in6_addr if_addr, unsigned char *buff,
+		size_t len)
 {
 	char __attribute__ ((aligned(8))) chdr[CMSG_SPACE(sizeof(struct in6_pktinfo))];
 	struct in6_pktinfo *pkt_info;

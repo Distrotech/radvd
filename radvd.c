@@ -440,7 +440,8 @@ void main_loop(int sock, void *interfaces, char const *conf_file)
 			timeout = -1;	/* negative timeout means poll waits forever for IO or a signal */
 		}
 
-		dlog(LOG_DEBUG, 1, "polling for %g seconds. Next iface is %s.", timeout / 1000.0, next_iface_to_expire->Name);
+		dlog(LOG_DEBUG, 1, "polling for %g seconds. Next iface is %s.", timeout / 1000.0,
+		     next_iface_to_expire->Name);
 
 		ts.tv_sec = timeout / 1000;
 		ts.tv_nsec = (timeout - 1000 * ts.tv_sec) * 1000000;
@@ -473,11 +474,9 @@ void main_loop(int sock, void *interfaces, char const *conf_file)
 				len = recv_rs_ra(sock, msg, &rcv_addr, &pkt_info, &hoplimit);
 				if (len > 0 && pkt_info) {
 					process(sock, interfaces, msg, len, &rcv_addr, pkt_info, hoplimit);
-				}
-				else if (!pkt_info) {
+				} else if (!pkt_info) {
 					dlog(LOG_INFO, 4, "recv_rs_ra returned null pkt_info.");
-				}
-				else if (len <= 0) {
+				} else if (len <= 0) {
 					dlog(LOG_INFO, 4, "recv_rs_ra returned len <= 0: %d", len);
 				}
 			}
@@ -649,7 +648,8 @@ void setup_iface_foo(struct Interface *iface, void *data)
 
 	if (setup_iface(sock, iface) < 0) {
 		if (iface->IgnoreIfMissing) {
-			dlog(LOG_DEBUG, 4, "interface %s does not exist or is not set up properly, ignoring the interface", iface->Name);
+			dlog(LOG_DEBUG, 4, "interface %s does not exist or is not set up properly, ignoring the interface",
+			     iface->Name);
 		} else {
 			flog(LOG_ERR, "interface %s does not exist or is not set up properly", iface->Name);
 			exit(1);
@@ -736,9 +736,10 @@ void reset_prefix_lifetimes_foo(struct Interface *iface, void *data)
 	for (prefix = iface->AdvPrefixList; prefix; prefix = prefix->next) {
 		if (prefix->DecrementLifetimesFlag) {
 			addrtostr(&prefix->Prefix, pfx_str, sizeof(pfx_str));
-			dlog(LOG_DEBUG, 4, "%s/%u%%%s plft reset from %u to %u secs", pfx_str, prefix->PrefixLen, iface->Name, prefix->curr_preferredlft,
-			     prefix->AdvPreferredLifetime);
-			dlog(LOG_DEBUG, 4, "%s/%u%%%s vlft reset from %u to %u secs", pfx_str, prefix->PrefixLen, iface->Name, prefix->curr_validlft, prefix->AdvValidLifetime);
+			dlog(LOG_DEBUG, 4, "%s/%u%%%s plft reset from %u to %u secs", pfx_str, prefix->PrefixLen,
+			     iface->Name, prefix->curr_preferredlft, prefix->AdvPreferredLifetime);
+			dlog(LOG_DEBUG, 4, "%s/%u%%%s vlft reset from %u to %u secs", pfx_str, prefix->PrefixLen,
+			     iface->Name, prefix->curr_validlft, prefix->AdvValidLifetime);
 			prefix->curr_validlft = prefix->AdvValidLifetime;
 			prefix->curr_preferredlft = prefix->AdvPreferredLifetime;
 		}
@@ -792,7 +793,9 @@ int check_conffile_perm(const char *username, const char *conf_file)
 	}
 
 	/* for non-root: must not be writable by self/own group */
-	if (strncmp(username, "root", 5) != 0 && ((stbuf.st_mode & S_IWGRP && pw->pw_gid == stbuf.st_gid) || (stbuf.st_mode & S_IWUSR && pw->pw_uid == stbuf.st_uid))) {
+	if (strncmp(username, "root", 5) != 0
+	    && ((stbuf.st_mode & S_IWGRP && pw->pw_gid == stbuf.st_gid)
+		|| (stbuf.st_mode & S_IWUSR && pw->pw_uid == stbuf.st_uid))) {
 		flog(LOG_ERR, "Insecure file permissions (writable by self/group): %s", conf_file);
 		return -1;
 	}

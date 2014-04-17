@@ -21,7 +21,8 @@ static void process_rs(int sock, struct Interface *, unsigned char *msg, int len
 static void process_ra(struct Interface *, unsigned char *msg, int len, struct sockaddr_in6 *);
 static int addr_match(struct in6_addr *a1, struct in6_addr *a2, int prefixlen);
 
-void process(int sock, struct interfaces *interfaces, unsigned char *msg, int len, struct sockaddr_in6 *addr, struct in6_pktinfo *pkt_info, int hoplimit)
+void process(int sock, struct interfaces *interfaces, unsigned char *msg, int len, struct sockaddr_in6 *addr,
+	     struct in6_pktinfo *pkt_info, int hoplimit)
 {
 	struct Interface *iface;
 	struct icmp6_hdr *icmph;
@@ -82,7 +83,8 @@ void process(int sock, struct interfaces *interfaces, unsigned char *msg, int le
 	}
 
 	if (icmph->icmp6_code != 0) {
-		flog(LOG_WARNING, "received icmpv6 RS/RA packet with invalid code (%d) from %s", icmph->icmp6_code, addr_str);
+		flog(LOG_WARNING, "received icmpv6 RS/RA packet with invalid code (%d) from %s", icmph->icmp6_code,
+		     addr_str);
 		return;
 	}
 
@@ -90,12 +92,14 @@ void process(int sock, struct interfaces *interfaces, unsigned char *msg, int le
 	iface = find_iface_by_index(interfaces, pkt_info->ipi6_ifindex);
 
 	if (iface == NULL) {
-		flog(LOG_WARNING, "received icmpv6 RS/RA packet on an unknown interface with index %d", pkt_info->ipi6_ifindex);
+		flog(LOG_WARNING, "received icmpv6 RS/RA packet on an unknown interface with index %d",
+		     pkt_info->ipi6_ifindex);
 		return;
 	}
 
 	if (!iface->ready && (0 != setup_iface(sock, iface))) {
-		flog(LOG_WARNING, "received RS or RA on %s but %s is not ready and setup_iface failed", iface->Name, iface->Name);
+		flog(LOG_WARNING, "received RS or RA on %s but %s is not ready and setup_iface failed", iface->Name,
+		     iface->Name);
 		return;
 	}
 
@@ -144,7 +148,8 @@ static void process_rs(int sock, struct Interface *iface, unsigned char *msg, in
 		}
 
 		if (*opt_str == ND_OPT_SOURCE_LINKADDR && IN6_IS_ADDR_UNSPECIFIED(&addr->sin6_addr)) {
-			flog(LOG_WARNING, "received icmpv6 RS packet with unspecified source address and there is a lladdr option");
+			flog(LOG_WARNING,
+			     "received icmpv6 RS packet with unspecified source address and there is a lladdr option");
 			return;
 		}
 
@@ -161,7 +166,9 @@ static void process_rs(int sock, struct Interface *iface, unsigned char *msg, in
 	} else if (timevaldiff(&tv, &iface->last_multicast) / 1000.0 < iface->MinDelayBetweenRAs) {
 		/* last RA was sent only a few moments ago, don't send another immediately. */
 		next =
-		    iface->MinDelayBetweenRAs - (tv.tv_sec + tv.tv_usec / 1000000.0) + (iface->last_multicast.tv_sec + iface->last_multicast.tv_usec / 1000000.0) + delay / 1000.0;
+		    iface->MinDelayBetweenRAs - (tv.tv_sec + tv.tv_usec / 1000000.0) + (iface->last_multicast.tv_sec +
+											iface->last_multicast.tv_usec /
+											1000000.0) + delay / 1000.0;
 		dlog(LOG_DEBUG, 5, "rate limiting RA's on %s, rescheduling RA %f seconds from now", iface->Name, next);
 		reschedule_iface(iface, next);
 	} else {
@@ -200,11 +207,13 @@ static void process_ra(struct Interface *iface, unsigned char *msg, int len, str
 
 	/* note: we don't check the default router preference here, because they're likely different */
 
-	if ((radvert->nd_ra_reachable && iface->AdvReachableTime) && (ntohl(radvert->nd_ra_reachable) != iface->AdvReachableTime)) {
+	if ((radvert->nd_ra_reachable && iface->AdvReachableTime)
+	    && (ntohl(radvert->nd_ra_reachable) != iface->AdvReachableTime)) {
 		flog(LOG_WARNING, "our AdvReachableTime on %s doesn't agree with %s", iface->Name, addr_str);
 	}
 
-	if ((radvert->nd_ra_retransmit && iface->AdvRetransTimer) && (ntohl(radvert->nd_ra_retransmit) != iface->AdvRetransTimer)) {
+	if ((radvert->nd_ra_retransmit && iface->AdvRetransTimer)
+	    && (ntohl(radvert->nd_ra_retransmit) != iface->AdvRetransTimer)) {
 		flog(LOG_WARNING, "our AdvRetransTimer on %s doesn't agree with %s", iface->Name, addr_str);
 	}
 
@@ -240,7 +249,8 @@ static void process_ra(struct Interface *iface, unsigned char *msg, int len, str
 			flog(LOG_ERR, "zero length option in RA on %s from %s", iface->Name, addr_str);
 			break;
 		} else if (optlen > len) {
-			flog(LOG_ERR, "option length (%d) greater than total" " length (%d) in RA on %s from %s", optlen, len, iface->Name, addr_str);
+			flog(LOG_ERR, "option length (%d) greater than total" " length (%d) in RA on %s from %s", optlen,
+			     len, iface->Name, addr_str);
 			break;
 		}
 
@@ -264,14 +274,19 @@ static void process_ra(struct Interface *iface, unsigned char *msg, int len, str
 			prefix = iface->AdvPrefixList;
 			while (prefix) {
 				if (prefix->enabled &&
-				    (prefix->PrefixLen == pinfo->nd_opt_pi_prefix_len) && addr_match(&prefix->Prefix, &pinfo->nd_opt_pi_prefix, prefix->PrefixLen)) {
+				    (prefix->PrefixLen == pinfo->nd_opt_pi_prefix_len)
+				    && addr_match(&prefix->Prefix, &pinfo->nd_opt_pi_prefix, prefix->PrefixLen)) {
 					addrtostr(&prefix->Prefix, prefix_str, sizeof(prefix_str));
 
 					if (!prefix->DecrementLifetimesFlag && valid != prefix->AdvValidLifetime) {
-						flog(LOG_WARNING, "our AdvValidLifetime on" " %s for %s doesn't agree with %s", iface->Name, prefix_str, addr_str);
+						flog(LOG_WARNING,
+						     "our AdvValidLifetime on" " %s for %s doesn't agree with %s",
+						     iface->Name, prefix_str, addr_str);
 					}
 					if (!prefix->DecrementLifetimesFlag && preferred != prefix->AdvPreferredLifetime) {
-						flog(LOG_WARNING, "our AdvPreferredLifetime on" " %s for %s doesn't agree with %s", iface->Name, prefix_str, addr_str);
+						flog(LOG_WARNING,
+						     "our AdvPreferredLifetime on" " %s for %s doesn't agree with %s",
+						     iface->Name, prefix_str, addr_str);
 					}
 				}
 
@@ -306,7 +321,8 @@ static void process_ra(struct Interface *iface, unsigned char *msg, int len, str
 				if (!check_rdnss_presence(rdnss, &rdnssinfo->nd_opt_rdnssi_addr3)) {
 					/* no match found in iface->AdvRDNSSList */
 					addrtostr(&rdnssinfo->nd_opt_rdnssi_addr3, rdnss_str, sizeof(rdnss_str));
-					flog(LOG_WARNING, "RDNSS address %s received on %s from %s is not advertised by us", rdnss_str, iface->Name, addr_str);
+					flog(LOG_WARNING, "RDNSS address %s received on %s from %s is not advertised by us",
+					     rdnss_str, iface->Name, addr_str);
 				}
 				/* FALLTHROUGH */
 			case 5:
@@ -314,7 +330,8 @@ static void process_ra(struct Interface *iface, unsigned char *msg, int len, str
 				if (!check_rdnss_presence(rdnss, &rdnssinfo->nd_opt_rdnssi_addr2)) {
 					/* no match found in iface->AdvRDNSSList */
 					addrtostr(&rdnssinfo->nd_opt_rdnssi_addr2, rdnss_str, sizeof(rdnss_str));
-					flog(LOG_WARNING, "RDNSS address %s received on %s from %s is not advertised by us", rdnss_str, iface->Name, addr_str);
+					flog(LOG_WARNING, "RDNSS address %s received on %s from %s is not advertised by us",
+					     rdnss_str, iface->Name, addr_str);
 				}
 				/* FALLTHROUGH */
 			case 3:
@@ -322,7 +339,8 @@ static void process_ra(struct Interface *iface, unsigned char *msg, int len, str
 				if (!check_rdnss_presence(rdnss, &rdnssinfo->nd_opt_rdnssi_addr1)) {
 					/* no match found in iface->AdvRDNSSList */
 					addrtostr(&rdnssinfo->nd_opt_rdnssi_addr1, rdnss_str, sizeof(rdnss_str));
-					flog(LOG_WARNING, "RDNSS address %s received on %s from %s is not advertised by us", rdnss_str, iface->Name, addr_str);
+					flog(LOG_WARNING, "RDNSS address %s received on %s from %s is not advertised by us",
+					     rdnss_str, iface->Name, addr_str);
 				}
 
 				break;
@@ -351,7 +369,9 @@ static void process_ra(struct Interface *iface, unsigned char *msg, int len, str
 						continue;
 
 					if (!check_dnssl_presence(iface->AdvDNSSLList, suffix)) {
-						flog(LOG_WARNING, "DNSSL suffix %s received on %s from %s is not advertised by us", suffix, iface->Name, addr_str);
+						flog(LOG_WARNING,
+						     "DNSSL suffix %s received on %s from %s is not advertised by us",
+						     suffix, iface->Name, addr_str);
 					}
 
 					suffix[0] = '\0';
@@ -363,8 +383,11 @@ static void process_ra(struct Interface *iface, unsigned char *msg, int len, str
 				 * 2) last byte of dnssli_suffix must not overflow opt_str + len
 				 */
 				if ((sizeof(suffix) - strlen(suffix)) < (label_len + 2) ||
-				    label_len > label_len + 2 || &dnsslinfo->nd_opt_dnssli_suffixes[offset + label_len] - opt_str >= len || offset + label_len < offset) {
-					flog(LOG_ERR, "oversized suffix in DNSSL option on %s from %s", iface->Name, addr_str);
+				    label_len > label_len + 2
+				    || &dnsslinfo->nd_opt_dnssli_suffixes[offset + label_len] - opt_str >= len
+				    || offset + label_len < offset) {
+					flog(LOG_ERR, "oversized suffix in DNSSL option on %s from %s", iface->Name,
+					     addr_str);
 					break;
 				}
 

@@ -270,7 +270,7 @@ struct Interface *find_iface_by_index(void *interfaces, int index);
 struct Interface *find_iface_by_time(void *interfaces);
 void for_each_iface(void *interfaces, void (*foo) (struct Interface *, void *), void *data);
 void free_iface_list(struct Interface *iface);
-void reschedule_iface(struct Interface * iface, double next);
+void reschedule_iface(struct Interface *iface, double next);
 void free_ifaces(void *interfaces);
 
 /* socket.c */
@@ -279,7 +279,8 @@ int open_icmpv6_socket(void);
 /* send.c */
 int send_ra(int sock, struct Interface *iface, struct in6_addr *dest);
 int send_ra_forall(int sock, struct Interface *iface, struct in6_addr *dest);
-int really_send(int sock, struct in6_addr const *dest, unsigned int if_index, struct in6_addr if_addr, unsigned char *buff, size_t len);
+int really_send(int sock, struct in6_addr const *dest, unsigned int if_index, struct in6_addr if_addr, unsigned char *buff,
+		size_t len);
 void add_sllao(unsigned char *buff, size_t * len, struct Interface *iface);
 
 /* syscalls.c */

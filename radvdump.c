@@ -176,7 +176,8 @@ void print_ff(unsigned char *msg, int len, struct sockaddr_in6 *addr, int hoplim
 		printf("\tAdvDefaultLifetime %hu;\n", ntohs(radvert->nd_ra_router_lifetime));
 
 	/* Mobile IPv6 ext */
-	if (!edefs || DFLT_AdvHomeAgentFlag != (ND_RA_FLAG_HOME_AGENT == (radvert->nd_ra_flags_reserved & ND_RA_FLAG_HOME_AGENT)))
+	if (!edefs
+	    || DFLT_AdvHomeAgentFlag != (ND_RA_FLAG_HOME_AGENT == (radvert->nd_ra_flags_reserved & ND_RA_FLAG_HOME_AGENT)))
 		printf("\tAdvHomeAgentFlag %s;\n", (radvert->nd_ra_flags_reserved & ND_RA_FLAG_HOME_AGENT) ? "on" : "off");
 
 	/* Route Preferences and more specific routes */
@@ -210,7 +211,8 @@ void print_ff(unsigned char *msg, int len, struct sockaddr_in6 *addr, int hoplim
 			flog(LOG_ERR, "zero length option in RA");
 			break;
 		} else if (optlen > len) {
-			flog(LOG_ERR, "option length greater than total" " length in RA (type %d, optlen %d, len %d)", (int)*opt_str, optlen, len);
+			flog(LOG_ERR, "option length greater than total" " length in RA (type %d, optlen %d, len %d)",
+			     (int)*opt_str, optlen, len);
 			break;
 		}
 
@@ -242,7 +244,8 @@ void print_ff(unsigned char *msg, int len, struct sockaddr_in6 *addr, int hoplim
 
 			/* NEMO ext */
 			if (!edefs || DFLT_AdvMobRtrSupportFlag != (ha_info->flags_reserved & ND_OPT_HAI_FLAG_SUPPORT_MR))
-				printf("\tAdvMobRtrSupportFlag %s;\n", (ha_info->flags_reserved & ND_OPT_HAI_FLAG_SUPPORT_MR) ? "on" : "off");
+				printf("\tAdvMobRtrSupportFlag %s;\n",
+				       (ha_info->flags_reserved & ND_OPT_HAI_FLAG_SUPPORT_MR) ? "on" : "off");
 
 			if (!edefs || DFLT_HomeAgentPreference != ntohs(ha_info->preference))
 				printf("\tHomeAgentPreference %hu;\n", ntohs(ha_info->preference));
@@ -299,7 +302,8 @@ void print_ff(unsigned char *msg, int len, struct sockaddr_in6 *addr, int hoplim
 			flog(LOG_ERR, "zero length option in RA");
 			break;
 		} else if (optlen > orig_len) {
-			flog(LOG_ERR, "option length greater than total" " length in RA (type %d, optlen %d, len %d)", (int)*opt_str, optlen, orig_len);
+			flog(LOG_ERR, "option length greater than total" " length in RA (type %d, optlen %d, len %d)",
+			     (int)*opt_str, optlen, orig_len);
 			break;
 		}
 
@@ -326,15 +330,24 @@ void print_ff(unsigned char *msg, int len, struct sockaddr_in6 *addr, int hoplim
 					printf("\t\tAdvPreferredLifetime %u;\n", ntohl(pinfo->nd_opt_pi_preferred_time));
 			}
 
-			if (!edefs || DFLT_AdvOnLinkFlag != (ND_OPT_PI_FLAG_ONLINK == (pinfo->nd_opt_pi_flags_reserved & ND_OPT_PI_FLAG_ONLINK)))
-				printf("\t\tAdvOnLink %s;\n", (pinfo->nd_opt_pi_flags_reserved & ND_OPT_PI_FLAG_ONLINK) ? "on" : "off");
+			if (!edefs
+			    || DFLT_AdvOnLinkFlag != (ND_OPT_PI_FLAG_ONLINK ==
+						      (pinfo->nd_opt_pi_flags_reserved & ND_OPT_PI_FLAG_ONLINK)))
+				printf("\t\tAdvOnLink %s;\n",
+				       (pinfo->nd_opt_pi_flags_reserved & ND_OPT_PI_FLAG_ONLINK) ? "on" : "off");
 
-			if (!edefs || DFLT_AdvAutonomousFlag != (ND_OPT_PI_FLAG_AUTO == (pinfo->nd_opt_pi_flags_reserved & ND_OPT_PI_FLAG_AUTO)))
-				printf("\t\tAdvAutonomous %s;\n", (pinfo->nd_opt_pi_flags_reserved & ND_OPT_PI_FLAG_AUTO) ? "on" : "off");
+			if (!edefs
+			    || DFLT_AdvAutonomousFlag != (ND_OPT_PI_FLAG_AUTO ==
+							  (pinfo->nd_opt_pi_flags_reserved & ND_OPT_PI_FLAG_AUTO)))
+				printf("\t\tAdvAutonomous %s;\n",
+				       (pinfo->nd_opt_pi_flags_reserved & ND_OPT_PI_FLAG_AUTO) ? "on" : "off");
 
 			/* Mobile IPv6 ext */
-			if (!edefs || DFLT_AdvRouterAddr != (ND_OPT_PI_FLAG_RADDR == (pinfo->nd_opt_pi_flags_reserved & ND_OPT_PI_FLAG_RADDR)))
-				printf("\t\tAdvRouterAddr %s;\n", (pinfo->nd_opt_pi_flags_reserved & ND_OPT_PI_FLAG_RADDR) ? "on" : "off");
+			if (!edefs
+			    || DFLT_AdvRouterAddr != (ND_OPT_PI_FLAG_RADDR ==
+						      (pinfo->nd_opt_pi_flags_reserved & ND_OPT_PI_FLAG_RADDR)))
+				printf("\t\tAdvRouterAddr %s;\n",
+				       (pinfo->nd_opt_pi_flags_reserved & ND_OPT_PI_FLAG_RADDR) ? "on" : "off");
 
 			printf("\t}; # End of prefix definition\n\n");
 			break;

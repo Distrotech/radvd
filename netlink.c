@@ -68,9 +68,11 @@ int process_netlink_msg(int sock)
 			for (; RTA_OK(rta, rta_len); rta = RTA_NEXT(rta, rta_len)) {
 				if (rta->rta_type == IFLA_OPERSTATE || rta->rta_type == IFLA_LINKMODE) {
 					if (ifinfo->ifi_flags & IFF_RUNNING) {
-						dlog(LOG_DEBUG, 3, "%s, ifindex %d, flags is running", ifname, ifinfo->ifi_index);
+						dlog(LOG_DEBUG, 3, "%s, ifindex %d, flags is running", ifname,
+						     ifinfo->ifi_index);
 					} else {
-						dlog(LOG_DEBUG, 3, "%s, ifindex %d, flags is *NOT* running", ifname, ifinfo->ifi_index);
+						dlog(LOG_DEBUG, 3, "%s, ifindex %d, flags is *NOT* running", ifname,
+						     ifinfo->ifi_index);
 					}
 					++rc;
 				}

@@ -18,7 +18,7 @@ static void write_something(int sock)
 	if (-1 == rc) {
 		perror("sendmsg failed");
 		exit(1);
-	}	
+	}
 }
 
 int radvd_socket(int domain, int type, int protocol)
@@ -72,7 +72,7 @@ ssize_t radvd_recvmsg(int sockfd, struct msghdr * mhdr, int flags)
 	mhdr->msg_control = (void *)cmsg;
 	mhdr->msg_controllen = sizeof(chdr);
 
-	struct sockaddr_in6 * addr = (struct sockaddr_in6*)mhdr->msg_name;
+	struct sockaddr_in6 *addr = (struct sockaddr_in6 *)mhdr->msg_name;
 
 	memset((void *)addr, 0, sizeof(*addr));
 	addr->sin6_family = AF_INET6;
@@ -159,7 +159,7 @@ struct test_iface test_ifaces[] = {
 int radvd_if_nametoindex(char const *name)
 {
 	int i;
-	for (i = 0; i < sizeof(test_ifaces)/sizeof(test_ifaces[0]); ++i) {
+	for (i = 0; i < sizeof(test_ifaces) / sizeof(test_ifaces[0]); ++i) {
 		if (0 == strcmp(test_ifaces[i].ifa_name, name)) {
 			return test_ifaces[i].ifa_index;
 		}
@@ -173,7 +173,7 @@ int radvd_getifaddrs(struct ifaddrs **addresses)
 	struct sockaddr_in6 *a6;
 	int i;
 
-	for (i = 0; i < sizeof(test_ifaces)/sizeof(test_ifaces[0]); ++i) {
+	for (i = 0; i < sizeof(test_ifaces) / sizeof(test_ifaces[0]); ++i) {
 		struct ifaddrs *ifa_prev = ifa;
 		ifa = malloc(sizeof(struct ifaddrs));
 		memset(ifa, 0, sizeof(struct ifaddrs));

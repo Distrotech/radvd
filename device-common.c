@@ -185,14 +185,17 @@ int check_ip6_forwarding(void)
 		}
 		fclose(fp);
 	} else {
-		flog(LOG_DEBUG, "Correct IPv6 forwarding procfs entry not found, " "perhaps the procfs is disabled, " "or the kernel interface has changed?");
+		flog(LOG_DEBUG,
+		     "Correct IPv6 forwarding procfs entry not found, " "perhaps the procfs is disabled, "
+		     "or the kernel interface has changed?");
 		value = -1;
 	}
 #endif				/* __linux__ */
 
 #ifdef HAVE_SYS_SYSCTL_H
 	if (!fp && sysctl(forw_sysctl, sizeof(forw_sysctl) / sizeof(forw_sysctl[0]), &value, &size, NULL, 0) < 0) {
-		flog(LOG_DEBUG, "Correct IPv6 forwarding sysctl branch not found, " "perhaps the kernel interface has changed?");
+		flog(LOG_DEBUG,
+		     "Correct IPv6 forwarding sysctl branch not found, " "perhaps the kernel interface has changed?");
 		return (0);	/* this is of advisory value only */
 	}
 #endif
