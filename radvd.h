@@ -198,13 +198,6 @@ struct HomeAgentInfo {
 	uint16_t lifetime;
 };
 
-struct interfaces {
-	int count;
-	struct Interface *IfaceList;
-	struct Interface **by_index;
-	unsigned int flags;
-};
-
 /* Uclibc : include/netinet/icmpv6.h - Added by Bhadram*/
 #define ND_OPT_ARO	33
 #define ND_OPT_6CO	34
@@ -232,7 +225,7 @@ struct nd_opt_6co {
 };				/*Added by Bhadram */
 
 /* gram.y */
-struct interfaces *readin_config(char const *fname);
+struct Interface *readin_config(char const *fname);
 
 /* radvd.c */
 int check_ip6_forwarding(void);
@@ -265,13 +258,13 @@ void route_init_defaults(struct AdvRoute *, struct Interface *);
 void rdnss_init_defaults(struct AdvRDNSS *, struct Interface *);
 void dnssl_init_defaults(struct AdvDNSSL *, struct Interface *);
 int check_iface(struct Interface *);
-void iface_index_changed(struct Interface *iface);
-struct Interface *find_iface_by_index(void *interfaces, int index);
-struct Interface *find_iface_by_time(void *interfaces);
-void for_each_iface(void *interfaces, void (*foo) (struct Interface *, void *), void *data);
-void free_iface_list(struct Interface *iface);
+void free_ifaces(struct Interface * ifaces);
+
+struct Interface *find_iface_by_index(struct Interface * iface, int index);
+struct Interface *find_iface_by_time(struct Interface *iface_list);
+void for_each_iface(struct Interface *ifaces, void (*foo) (struct Interface *iface, void *), void *data);
+void free_iface_list(struct Interface *iface_list);
 void reschedule_iface(struct Interface *iface, double next);
-void free_ifaces(void *interfaces);
 
 /* socket.c */
 int open_icmpv6_socket(void);
@@ -296,7 +289,7 @@ void radvd_freeifaddrs(struct ifaddrs *);
 int radvd_bind(int sock, struct sockaddr *snl, size_t size);
 
 /* process.c */
-void process(int sock, struct interfaces *, unsigned char *, int, struct sockaddr_in6 *, struct in6_pktinfo *, int);
+void process(int sock, struct Interface *, unsigned char *, int, struct sockaddr_in6 *, struct in6_pktinfo *, int);
 
 /* recv.c */
 int recv_rs_ra(int sock, unsigned char *, struct sockaddr_in6 *, struct in6_pktinfo **, int *);

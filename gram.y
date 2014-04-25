@@ -160,8 +160,6 @@ void yyerror(char const * msg)
 %{
 #include "scanner.h"
 static char const * filename;
-static int interface_count;
-static struct Interface *IfaceList;
 static struct Interface *iface;
 static struct AdvPrefix *prefix;
 static struct AdvRoute *route;
@@ -1043,36 +1041,16 @@ static void cleanup(void)
 
 	if (abro)
 		free(abro);
-
-	if (IfaceList) {
-		free_iface_list(IfaceList);
-		IfaceList = 0;
-	}
 }
 
-struct fill_by_indexer {
-	struct Interface ** array;
-	int index;
-	unsigned int * flags;
-};
-
-void fill_by_index(struct Interface * iface, void * data);
-void fill_by_index(struct Interface * iface, void * data)
+struct Interface * readin_config(char const *fname)
 {
-	struct fill_by_indexer * fbi = (struct fill_by_indexer *)data;
-	fbi->array[fbi->index++] = iface;
-	iface->flags = fbi->flags;
-}
-
-struct interfaces * readin_config(char const *fname)
-{
-	struct interfaces * interfaces = 0;
+	struct Interface * retval = 0;
 	FILE * in;
 
 	in = fopen(fname, "r");
 
-	if (!in)
-	{
+	if (!in) {
 		flog(LOG_ERR, "can't open %s: %s", fname, strerror(errno));
 		return 0;
 	}
@@ -1085,31 +1063,10 @@ struct interfaces * readin_config(char const *fname)
 	}
 	else {
 		dlog(LOG_DEBUG, 1, "config file syntax ok.");
-
-		if (IfaceList) {
-			interfaces = malloc(sizeof(struct interfaces));
-			if (!interfaces) {
-				flog(LOG_ERR, "Unable to allocate memory for %d interfaces", interface_count);
-				exit(1);
-			}
-			memset(interfaces, 0, sizeof(struct interfaces));
-			interfaces->IfaceList = IfaceList;
-			interfaces->by_index = malloc(interface_count * sizeof(struct Interface*));
-			if (!interfaces->by_index) {
-				flog(LOG_ERR, "Unable to allocate memory for %d interfaces", interface_count);
-				exit(1);
-			}
-			struct fill_by_indexer fbi = {interfaces->by_index, 0, &interfaces->flags};
-			for_each_iface(interfaces, fill_by_index, &fbi);
-			interfaces->count = interface_count;
-			interfaces->flags = 1;
-		}
-		
-		dlog(LOG_INFO, 3, "Loaded %d Interfaces", interfaces->count);
 	}
 
 	fclose(in);
 
-	return interfaces;
+	return retval;
 }
 

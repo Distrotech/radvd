@@ -21,7 +21,7 @@ static void process_rs(int sock, struct Interface *, unsigned char *msg, int len
 static void process_ra(struct Interface *, unsigned char *msg, int len, struct sockaddr_in6 *);
 static int addr_match(struct in6_addr *a1, struct in6_addr *a2, int prefixlen);
 
-void process(int sock, struct interfaces *interfaces, unsigned char *msg, int len, struct sockaddr_in6 *addr,
+void process(int sock, struct Interface *interfaces, unsigned char *msg, int len, struct sockaddr_in6 *addr,
 	     struct in6_pktinfo *pkt_info, int hoplimit)
 {
 	struct Interface *iface;

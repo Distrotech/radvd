@@ -143,26 +143,19 @@ int setup_linklocal_addr(struct Interface *iface)
 	return -1;
 }
 
-/*
- * This function updates the if_index of an interface.  If the
- * if index changes, then return 1 to let the calling code know
- * to let the interfaces api know so the by_index array can be
- * marked dirty and later resorted.
- */
 int update_device_index(struct Interface *iface)
 {
-	int retval = 0;
 	int index = radvd_if_nametoindex(iface->Name);
 	if (0 == index) {
 		/* Yes, if_nametoindex returns zero on failure.  2014/01/16 */
 		flog(LOG_ERR, "%s not found: %s", iface->Name, strerror(errno));
-		retval |= 0x2;
+		return -1;
 	}
 	if (iface->if_index != index) {
+		dlog(LOG_DEBUG, 4, "%s if_index changed from %d to %d", iface->Name, iface->if_index, index);
 		iface->if_index = index;
-		retval |= 0x1;
 	}
-	return retval;
+	return 0;
 }
 
 int check_ip6_forwarding(void)

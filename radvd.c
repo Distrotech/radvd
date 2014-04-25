@@ -235,13 +235,13 @@ int main(int argc, char *argv[])
 		} else
 			flog(LOG_WARNING, "Insecure file permissions, but continuing anyway");
 	}
-
+#if 0
 	/* parse config file */
 	if ((interfaces = readin_config(conf_file)) == 0) {
 		flog(LOG_ERR, "Exiting, failed to read config file.");
 		exit(1);
 	}
-
+#endif
 	if (configtest) {
 		exit(0);
 	}
@@ -588,30 +588,12 @@ int setup_iface(int sock, struct Interface *iface)
 	iface->ready = 0;
 
 	/* Check IFF_UP, IFF_RUNNING and IFF_MULTICAST */
-	if (check_device(sock, iface) < 0)
+	if (check_device(sock, iface) < 0) {
 		return -1;
+	}
 
-	int rc = update_device_index(iface);
-	switch (rc) {
-	case 1:
-		/* the iface index changed */
-		iface_index_changed(iface);
-		 /**/ break;
-
-	case 2:
-		/* the iface index failed */
+	if (update_device_index(iface) < 0) {
 		return -1;
-		break;
-
-	case 3:
-		/* the iface index changed and failed */
-		iface_index_changed(iface);
-		 /**/ return -1;
-		break;
-
-	default:
-		/* Nothing changed and nothing failed. */
-		break;
 	}
 
 	/* Set iface->if_index, iface->max_mtu and iface hardware address */
