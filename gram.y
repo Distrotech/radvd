@@ -21,6 +21,9 @@
 #include "radvd.h"
 #include "defaults.h"
 
+#include <sys/types.h>
+#include <dirent.h>
+
 static int countbits(int b);
 static int count_mask(struct sockaddr_in6 *m);
 static struct in6_addr get_prefix6(struct in6_addr const *addr, struct in6_addr const *mask);
@@ -1043,29 +1046,57 @@ static void cleanup(void)
 		free(abro);
 }
 
-struct Interface * readin_config(char const *fname)
+struct Interface * readin_config(char const *dname)
 {
+
 	struct Interface * retval = 0;
-	FILE * in;
+	DIR * dir = opendir(dname);
+	if (dir) {
+		struct dirent *dirent = readdir(dir);
+		while (dirent) {
+			if (DT_LNK == dirent->d_type || DT_REG == dirent->d_type) {
 
-	in = fopen(fname, "r");
+				char * fname = 0;
+				int rc = asprintf(&fname, "%s/%s", dname, dirent->d_name);
+				if (-1 != rc && fname) {
+					FILE * in = fopen(fname, "r");
 
-	if (!in) {
-		flog(LOG_ERR, "can't open %s: %s", fname, strerror(errno));
-		return 0;
+					if (!in) {
+						flog(LOG_ERR, "can't open %s: %s", fname, strerror(errno));
+					} else {
+
+						filename = fname;
+						retval = iface;
+						iface = malloc(sizeof(struct Interface));
+						if (iface) {
+							iface_init_defaults(iface);
+							iface->next = retval;
+							strncpy(iface->Name, dirent->d_name, sizeof(iface->Name));
+							iface->Name[sizeof(iface->Name) -1] = '\0';
+
+							yyset_in(in);
+
+							if (yyparse() != 0) {
+								flog(LOG_ERR, "error parsing or activating the config file: %s", fname);
+								free(iface);
+							}
+							else {
+								dlog(LOG_DEBUG, 1, "config file, %s, syntax ok.", fname);
+							}
+						}
+
+						fclose(in);
+					}
+					free(fname);
+				}
+			}
+			dirent = readdir(dir);
+		}
+		closedir(dir);
 	}
 
-	filename = fname;
-	yyset_in(in);
-
-	if (yyparse() != 0) {
-		flog(LOG_ERR, "error parsing or activating the config file: %s", fname);
-	}
-	else {
-		dlog(LOG_DEBUG, 1, "config file syntax ok.");
-	}
-
-	fclose(in);
+	retval = iface;
+	iface = 0;
 
 	return retval;
 }
