@@ -175,46 +175,7 @@ static void cleanup(void);
 
 %%
 
-grammar		: grammar ifacedef
-		| ifacedef
-		;
-
-ifacedef	: ifacehead '{' ifaceparams  '}' ';'
-		{
-			struct Interface *iface2;
-
-			iface2 = IfaceList;
-			while (iface2)
-			{
-				if (!strcmp(iface2->Name, iface->Name))
-				{
-					/* TODO: print the locations of the duplicates. */
-					flog(LOG_ERR, "duplicate interface "
-						"definition for %s", iface->Name);
-					ABORT;
-				}
-				iface2 = iface2->next;
-			}
-
-			iface->next = IfaceList;
-			IfaceList = iface;
-			iface = NULL;
-			++interface_count;
-		};
-
-ifacehead	: T_INTERFACE name
-		{
-			iface = malloc(sizeof(struct Interface));
-
-			if (iface == NULL) {
-				flog(LOG_CRIT, "malloc failed: %s", strerror(errno));
-				ABORT;
-			}
-
-			iface_init_defaults(iface);
-			strncpy(iface->Name, $2, IFNAMSIZ-1);
-			iface->Name[IFNAMSIZ-1] = '\0';
-		}
+grammar		: ifaceparams
 		;
 
 name		: STRING
@@ -224,9 +185,8 @@ name		: STRING
 		}
 		;
 
-ifaceparams :
-		/* empty */
-		| ifaceparam ifaceparams
+ifaceparams 	: ifaceparams ifaceparam /* This is left recursion and won't overrun the stack. */
+		| /* empty */
 		;
 
 ifaceparam 	: ifaceval
