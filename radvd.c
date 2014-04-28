@@ -32,7 +32,7 @@
 static char usage_str[] = {
 "\n"
 "  -c, --configtest        Parse the config file and exit.\n"
-"  -C, --config=PATH       Sets the config file.  Default is /etc/radvd.conf.\n"
+"  -C, --config=PATH       Sets the config file.  Default is /etc/radvd.d.\n"
 "  -d, --debug=NUM         Sets the debug level.  Values can be 1, 2, 3, 4 or 5.\n"
 "  -f, --facility=NUM      Sets the logging facility.\n"
 "  -h, --help              Show this help screen.\n"
@@ -64,7 +64,7 @@ static struct option prog_opt[] = {
 #else
 
 static char usage_str[] = {
-"[-hsvcn] [-d level] [-C config_file] [-m log_method] [-l log_file]\n"
+"[-hsvcn] [-d level] [-C config_path] [-m log_method] [-l log_file]\n"
 "\t[-f facility] [-p pid_file] [-u username] [-t chrootdir]"
 
 };
@@ -91,13 +91,14 @@ void version(void);
 void usage(char const *pname);
 int drop_root_privileges(const char *);
 int check_conffile_perm(const char *, const char *);
+int check_confpath_perm(const char *, const char *);
 const char *radvd_get_pidfile(void);
 void setup_iface_foo(struct Interface *iface, void *data);
 void setup_ifaces(int sock, struct Interface *ifaces);
-void main_loop(int sock, struct Interface *ifaces, char const *conf_file);
+void main_loop(int sock, struct Interface *ifaces, char const *conf_path);
 void reset_prefix_lifetimes_foo(struct Interface *iface, void *data);
 void reset_prefix_lifetimes(struct Interface *ifaces);
-struct Interface *reload_config(int sock, struct Interface *ifaces, char const *conf_file);
+struct Interface *reload_config(int sock, struct Interface *ifaces, char const *conf_path);
 
 int main(int argc, char *argv[])
 {
@@ -121,7 +122,7 @@ int main(int argc, char *argv[])
 
 	log_method = L_STDERR_SYSLOG;
 	logfile = PATH_RADVD_LOG;
-	char const *conf_file = PATH_RADVD_CONF;
+	char const *conf_path = PATH_RADVD_CONF;
 	facility = LOG_FACILITY;
 	daemon_pid_file_ident = PATH_RADVD_PID;	/* libdaemon defines daemon_pid_file_ident */
 
@@ -135,7 +136,7 @@ int main(int argc, char *argv[])
 	{
 		switch (c) {
 		case 'C':
-			conf_file = optarg;
+			conf_path = optarg;
 			break;
 		case 'd':
 			set_debuglevel(atoi(optarg));
@@ -228,7 +229,7 @@ int main(int argc, char *argv[])
 	/* check that 'other' cannot write the file
 	 * for non-root, also that self/own group can't either
 	 */
-	if (check_conffile_perm(username, conf_file) < 0) {
+	if (check_confpath_perm(username, conf_path) < 0) {
 		if (get_debuglevel() == 0) {
 			flog(LOG_ERR, "Exiting, permissions on conf_file invalid.");
 			exit(1);
@@ -237,7 +238,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* parse config file */
-	if ((ifaces = readin_config(conf_file)) == 0) {
+	if ((ifaces = readin_config(conf_path)) == 0) {
 		flog(LOG_ERR, "Exiting, failed to read config file.");
 		exit(1);
 	}
@@ -349,7 +350,7 @@ int main(int argc, char *argv[])
 	}
 
 	setup_ifaces(sock, ifaces);
-	main_loop(sock, ifaces, conf_file);
+	main_loop(sock, ifaces, conf_path);
 	flog(LOG_INFO, "sending stop adverts");
 	stop_adverts(sock, ifaces);
 	if (daemonize) {
@@ -380,7 +381,7 @@ const char *radvd_get_pidfile(void)
 	return fn;
 }
 
-void main_loop(int sock, struct Interface *ifaces, char const *conf_file)
+void main_loop(int sock, struct Interface *ifaces, char const *conf_path)
 {
 	struct pollfd fds[2];
 	sigset_t sigmask;
@@ -500,7 +501,7 @@ void main_loop(int sock, struct Interface *ifaces, char const *conf_file)
 
 		if (sighup_received) {
 			dlog(LOG_INFO, 3, "sig hup received.");
-			ifaces = reload_config(sock, ifaces, conf_file);
+			ifaces = reload_config(sock, ifaces, conf_path);
 			sighup_received = 0;
 		}
 
@@ -649,7 +650,7 @@ void setup_ifaces(int sock, struct Interface *ifaces)
 	for_each_iface(ifaces, setup_iface_foo, &sock);
 }
 
-struct Interface *reload_config(int sock, struct Interface *ifaces, char const *conf_file)
+struct Interface *reload_config(int sock, struct Interface *ifaces, char const *conf_path)
 {
 	free_ifaces(ifaces);
 
@@ -658,7 +659,7 @@ struct Interface *reload_config(int sock, struct Interface *ifaces, char const *
 	ifaces = NULL;
 
 	/* reread config file */
-	if ((ifaces = readin_config(conf_file)) == 0) {
+	if ((ifaces = readin_config(conf_path)) == 0) {
 		flog(LOG_ERR, "Exiting, failed to read config file.");
 		exit(1);
 	}
@@ -786,11 +787,17 @@ int check_conffile_perm(const char *username, const char *conf_file)
 	return 0;
 }
 
+int check_confpath_perm(const char *username, const char *conf_path)
+{
+	/* TODO: call check_conffile_parm for each file in conf_path */
+	return 0;
+}
+
 void version(void)
 {
 	fprintf(stderr, "Version: %s\n\n", VERSION);
 	fprintf(stderr, "Compiled in settings:\n");
-	fprintf(stderr, "  default config file		\"%s\"\n", PATH_RADVD_CONF);
+	fprintf(stderr, "  default config path		\"%s\"\n", PATH_RADVD_CONF);
 	fprintf(stderr, "  default pidfile		\"%s\"\n", PATH_RADVD_PID);
 	fprintf(stderr, "  default logfile		\"%s\"\n", PATH_RADVD_LOG);
 	fprintf(stderr, "  default syslog facility	%d\n", LOG_FACILITY);

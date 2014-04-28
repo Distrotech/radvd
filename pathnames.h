@@ -16,7 +16,7 @@
 #pragma once
 
 #ifndef PATH_RADVD_CONF
-#define PATH_RADVD_CONF "/etc/radvd.conf"
+#define PATH_RADVD_CONF "/etc/radvd.d"
 #endif
 
 #ifndef PATH_RADVD_PID
