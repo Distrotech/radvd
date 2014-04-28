@@ -430,25 +430,22 @@ void main_loop(int sock, struct Interface *ifaces, char const *conf_path)
 #endif
 
 	for (;;) {
-		struct Interface *next_iface_to_expire;
-		int timeout;
 		struct timespec ts;
-		int rc;
+		struct timespec *tsp = 0;
 
-		next_iface_to_expire = find_iface_by_time(ifaces);
+		struct Interface * next_iface_to_expire = find_iface_by_time(ifaces);
 		if (next_iface_to_expire) {
-			timeout = next_time_msec(next_iface_to_expire);
+			int timeout = next_time_msec(next_iface_to_expire);
+			ts.tv_sec = timeout / 1000;
+			ts.tv_nsec = (timeout - 1000 * ts.tv_sec) * 1000000;
+			tsp = &ts;
+			dlog(LOG_DEBUG, 1, "polling for %g seconds. Next iface is %s.", timeout / 1000.0,
+			     next_iface_to_expire->Name);
 		} else {
-			timeout = -1;	/* negative timeout means poll waits forever for IO or a signal */
+			dlog(LOG_DEBUG, 1, "No iface is next. Polling indefinitely.");
 		}
 
-		dlog(LOG_DEBUG, 1, "polling for %g seconds. Next iface is %s.", timeout / 1000.0,
-		     next_iface_to_expire->Name);
-
-		ts.tv_sec = timeout / 1000;
-		ts.tv_nsec = (timeout - 1000 * ts.tv_sec) * 1000000;
-
-		rc = ppoll(fds, sizeof(fds) / sizeof(fds[0]), &ts, &sigempty);
+		int rc = ppoll(fds, sizeof(fds) / sizeof(fds[0]), tsp, &sigempty);
 
 		if (rc > 0) {
 #ifdef HAVE_NETLINK
