@@ -220,6 +220,12 @@ int check_iface(struct Interface *iface)
 
 struct Interface *find_iface_by_index(struct Interface * iface, int index)
 {
+	for (; iface; iface = iface->next) {
+		if (iface->if_index == index) {
+			return iface;
+		}
+	}
+
 	return 0;
 }
 
