@@ -225,7 +225,22 @@ struct Interface *find_iface_by_index(struct Interface * iface, int index)
 
 struct Interface *find_iface_by_time(struct Interface * iface)
 {
-	return 0;
+	if (!iface) {
+		return 0;
+	}
+
+	int timeout = next_time_msec(iface);
+	struct Interface * next = iface;
+
+	for (iface = iface->next; iface; iface = iface->next) {
+		int t = next_time_msec(iface);
+		if (timeout > t) {
+			timeout = t;
+			next = iface;
+		}
+	}
+
+	return next;
 }
 
 void reschedule_iface(struct Interface *iface, double next)
