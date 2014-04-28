@@ -669,17 +669,11 @@ struct Interface *reload_config(int sock, struct Interface *ifaces, char const *
 
 void sighup_handler(int sig)
 {
-	/* Linux has "one-shot" signals, reinstall the signal handler */
-	signal(SIGHUP, sighup_handler);
-
 	sighup_received = 1;
 }
 
 void sigterm_handler(int sig)
 {
-	/* Linux has "one-shot" signals, reinstall the signal handler */
-	signal(SIGTERM, sigterm_handler);
-
 	++sigterm_received;
 
 	if (sigterm_received > 2) {
@@ -689,9 +683,6 @@ void sigterm_handler(int sig)
 
 void sigint_handler(int sig)
 {
-	/* Linux has "one-shot" signals, reinstall the signal handler */
-	signal(SIGINT, sigint_handler);
-
 	++sigint_received;
 
 	if (sigint_received > 2) {
@@ -701,9 +692,6 @@ void sigint_handler(int sig)
 
 void sigusr1_handler(int sig)
 {
-	/* Linux has "one-shot" signals, reinstall the signal handler */
-	signal(SIGUSR1, sigusr1_handler);
-
 	sigusr1_received = 1;
 }
 
