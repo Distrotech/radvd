@@ -430,11 +430,11 @@ void main_loop(int sock, struct Interface *ifaces, char const *conf_path)
 #endif
 
 	for (;;) {
-		struct timespec ts;
 		struct timespec *tsp = 0;
 
 		struct Interface * next_iface_to_expire = find_iface_by_time(ifaces);
 		if (next_iface_to_expire) {
+			static struct timespec ts;
 			int timeout = next_time_msec(next_iface_to_expire);
 			ts.tv_sec = timeout / 1000;
 			ts.tv_nsec = (timeout - 1000 * ts.tv_sec) * 1000000;
