@@ -23,6 +23,7 @@
 
 #include <sys/types.h>
 #include <dirent.h>
+#include <errno.h>
 
 static int countbits(int b);
 static int count_mask(struct sockaddr_in6 *m);
@@ -1046,57 +1047,84 @@ static void cleanup(void)
 		free(abro);
 }
 
-struct Interface * readin_config(char const *dname)
+static struct Interface * readin_file(char * fname, FILE * in, char const * iface_name)
+{
+	/* Global parser var iface. */
+	iface = malloc(sizeof(struct Interface));
+
+	if (iface) {
+		iface_init_defaults(iface);
+		strncpy(iface->Name, iface_name, sizeof(iface->Name));
+		iface->Name[sizeof(iface->Name) -1] = '\0';
+
+		char * dot = strchr(iface->Name, '.');
+		if (dot) {
+			*dot = '\0';
+		}
+
+		yyset_in(in);
+
+		if (yyparse() != 0) {
+			flog(LOG_ERR, "error parsing or activating the config file: %s", fname);
+			free(iface);
+		}
+		else {
+			dlog(LOG_DEBUG, 1, "config file, %s, syntax ok.", fname);
+		}
+	}
+
+	return iface;
+}
+
+static struct Interface * readin_dirent(struct dirent * dirent, char const * dname)
 {
 
+	char * fname = 0;
+	int rc = asprintf(&fname, "%s/%s", dname, dirent->d_name);
+	if (-1 != rc && fname) {
+		FILE * in = fopen(fname, "r");
+
+		if (!in) {
+			flog(LOG_ERR, "can't open %s: %s", fname, strerror(errno));
+		}
+		else {
+			/* Global parser var filename. */
+			filename = fname;
+			readin_file(fname, in, dirent->d_name);
+			fclose(in);
+		}
+		free(fname);
+	}
+
+	return iface;
+}
+
+static struct Interface * readin_dir(DIR * dir, char const * dname)
+{
+	struct Interface * retval = 0;
+	struct dirent *dirent = readdir(dir);
+	while (dirent) {
+		if (DT_LNK == dirent->d_type || DT_REG == dirent->d_type) {
+			struct Interface * retval_next = retval;
+			retval = readin_dirent(dirent, dname);
+			retval->next = retval_next;
+		}
+		dirent = readdir(dir);
+	}
+	return retval;
+}
+
+struct Interface * readin_config(char const *dname)
+{
 	struct Interface * retval = 0;
 	DIR * dir = opendir(dname);
 	if (dir) {
-		struct dirent *dirent = readdir(dir);
-		while (dirent) {
-			if (DT_LNK == dirent->d_type || DT_REG == dirent->d_type) {
-
-				char * fname = 0;
-				int rc = asprintf(&fname, "%s/%s", dname, dirent->d_name);
-				if (-1 != rc && fname) {
-					FILE * in = fopen(fname, "r");
-
-					if (!in) {
-						flog(LOG_ERR, "can't open %s: %s", fname, strerror(errno));
-					} else {
-
-						filename = fname;
-						retval = iface;
-						iface = malloc(sizeof(struct Interface));
-						if (iface) {
-							iface_init_defaults(iface);
-							iface->next = retval;
-							strncpy(iface->Name, dirent->d_name, sizeof(iface->Name));
-							iface->Name[sizeof(iface->Name) -1] = '\0';
-
-							yyset_in(in);
-
-							if (yyparse() != 0) {
-								flog(LOG_ERR, "error parsing or activating the config file: %s", fname);
-								free(iface);
-							}
-							else {
-								dlog(LOG_DEBUG, 1, "config file, %s, syntax ok.", fname);
-							}
-						}
-
-						fclose(in);
-					}
-					free(fname);
-				}
-			}
-			dirent = readdir(dir);
-		}
+		retval = readin_dir(dir, dname);
 		closedir(dir);
 	}
-
-	retval = iface;
-	iface = 0;
+	else {
+		dlog(LOG_DEBUG, 1, "Unable to open config path, %s: %s", dname, strerror(errno));
+	}
 
 	return retval;
 }

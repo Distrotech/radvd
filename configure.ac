@@ -115,9 +115,9 @@ AC_MSG_RESULT($PATH_RADVD_PID)
 dnl Check where to put the configfile
 AC_MSG_CHECKING(where to find configfile)
 AC_ARG_WITH(configfile,
-[  --with-configfile       Path to the radvd config file [SYSCONF/radvd.conf]],
+[  --with-configfile       Path to the radvd config file [SYSCONF/radvd.d]],
 	PATH_RADVD_CONF=$withval,
-	[eval PATH_RADVD_CONF=${sysconfdir}/radvd.conf])
+	[eval PATH_RADVD_CONF=${sysconfdir}/radvd.d])
 PATH_RADVD_CONF=$(echo $PATH_RADVD_CONF | sed 's/NONE//1')
 AC_MSG_RESULT($PATH_RADVD_CONF)
 
