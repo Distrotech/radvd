@@ -163,6 +163,8 @@ void yyerror(char const * msg)
 
 %{
 #include "scanner.h"
+extern int yycolumn;
+extern int yylineno;
 static char const * filename;
 static struct Interface *iface;
 static struct AdvPrefix *prefix;
@@ -1063,7 +1065,8 @@ static struct Interface * readin_file(char * fname, FILE * in, char const * ifac
 		}
 
 		yyset_in(in);
-
+		yycolumn = 1;
+		yylineno = 1;
 		if (yyparse() != 0) {
 			flog(LOG_ERR, "Error: (%s) parsing or activating the config file.", fname);
 			free(iface);
