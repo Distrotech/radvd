@@ -858,14 +858,15 @@ dnsslplist	: dnsslplist dnsslparms
 
 dnsslparms	: T_AdvDNSSLLifetime number_or_infinity ';'
 		{
-			if ($2 < iface->MaxRtrAdvInterval && $2 != 0) {
-				flog(LOG_ERR, "Error: (%s:%d) AdvDNSSLLifetime must be at least MaxRtrAdvInterval.", filename, @1.first_line);
-				ABORT;
-			}
 			if ($2 > 2*(iface->MaxRtrAdvInterval))
 				flog(LOG_WARNING, "Warning: (%s:%d) AdvDNSSLLifetime <= 2*MaxRtrAdvInterval would allow stale DNS suffixes to be deleted faster", filename, @1.first_line);
+			if ($2 < iface->MaxRtrAdvInterval && $2 != 0) {
+				flog(LOG_ERR, "Error: (%s:%d) AdvDNSSLLifetime must be at least MaxRtrAdvInterval.", filename, @1.first_line);
+				dnssl->AdvDNSSLLifetime = iface->MaxRtrAdvInterval;
+			} else {
+				dnssl->AdvDNSSLLifetime = $2;
+			}
 
-			dnssl->AdvDNSSLLifetime = $2;
 		}
 		| T_FlushDNSSL SWITCH ';'
 		{
