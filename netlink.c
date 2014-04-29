@@ -85,6 +85,11 @@ int process_netlink_msg(int sock, void * interfaces)
 				reschedule_iface(iface, 0);
 			}
 
+		} else if (nh->nlmsg_type == RTM_DELADDR) {
+			struct ifaddrmsg *ifaddr = (struct ifaddrmsg *)NLMSG_DATA(nh);
+			const char *ifname = radvd_if_indextoname(ifaddr->ifa_index, ifnamebuf);
+
+			dlog(LOG_DEBUG, 3, "%s, ifindex %d, del address", ifname, ifaddr->ifa_index);
 		} else if (nh->nlmsg_type == RTM_NEWADDR) {
 			struct ifaddrmsg *ifaddr = (struct ifaddrmsg *)NLMSG_DATA(nh);
 			const char *ifname = radvd_if_indextoname(ifaddr->ifa_index, ifnamebuf);
