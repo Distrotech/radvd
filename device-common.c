@@ -158,11 +158,14 @@ int update_device_index(struct Interface *iface)
 	return 0;
 }
 
+int disable_ipv6_autoconfiguration(struct Interface * iface)
+{
+/* TODO: copy copy from check_ip6_forwarding and modify */
+	return 0;
+}
+
 int check_ip6_forwarding(void)
 {
-#ifdef HAVE_SYS_SYSCTL_H
-	int forw_sysctl[] = { SYSCTL_IP6_FORWARDING };
-#endif
 	int value;
 	size_t size = sizeof(value);
 	FILE *fp = NULL;
@@ -186,6 +189,7 @@ int check_ip6_forwarding(void)
 #endif				/* __linux__ */
 
 #ifdef HAVE_SYS_SYSCTL_H
+	int forw_sysctl[] = { SYSCTL_IP6_FORWARDING };
 	if (!fp && sysctl(forw_sysctl, sizeof(forw_sysctl) / sizeof(forw_sysctl[0]), &value, &size, NULL, 0) < 0) {
 		flog(LOG_DEBUG,
 		     "Correct IPv6 forwarding sysctl branch not found, " "perhaps the kernel interface has changed?");
@@ -216,3 +220,4 @@ int check_ip6_forwarding(void)
 
 	return (0);
 }
+
