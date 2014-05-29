@@ -160,7 +160,51 @@ int update_device_index(struct Interface *iface)
 
 int disable_ipv6_autoconfiguration(struct Interface * iface)
 {
-/* TODO: copy copy from check_ip6_forwarding and modify */
+	int value;
+	size_t size = sizeof(value);
+	FILE *fp = NULL;
+	static int warned = 0;
+
+#ifdef __linux__
+	fp = fopen(PROC_SYS_IP6_AUTOCONFIG, "r");
+	if (fp) {
+		int rc = fscanf(fp, "%d", &value);
+		if (rc != 1) {
+			flog(LOG_ERR, "cannot read value from %s: %s", PROC_SYS_IP6_AUTOCONFIG, strerror(errno));
+			exit(1);
+		}
+		fclose(fp);
+	} else {
+		flog(LOG_DEBUG,
+		     "Correct IPv6 autoconf procfs entry not found, " "perhaps the procfs is disabled, "
+		     "or the kernel interface has changed?");
+		value = -1;
+	}
+#endif				/* __linux__ */
+
+#ifdef HAVE_SYS_SYSCTL_H
+	int autoconf_sysctl[] = { SYSCTL_IP6_AUTOCONFIG };
+	if (!fp && sysctl(autoconf_sysctl, sizeof(autoconf_sysctl) / sizeof(autoconf_sysctl[0]), &value, &size, NULL, 0) < 0) {
+		flog(LOG_DEBUG,
+		     "Correct IPv6 autoconf sysctl branch not found, " "perhaps the kernel interface has changed?");
+		return (0);	/* this is of advisory value only */
+	}
+#endif
+
+#ifdef __linux__
+	if (!warned && value != 0) {
+		warned = 1;
+		flog(LOG_DEBUG, "IPv6 forwarding setting is: %u, should be 0", value);
+		return -1;
+	}
+#else
+	if (!warned && value != 0) {
+		warned = 1;
+		flog(LOG_DEBUG, "IPv6 forwarding setting is: %u, should be 0", value);
+		return -1;
+	}
+#endif				/* __linux__ */
+
 	return 0;
 }
 
