@@ -228,6 +228,7 @@ struct nd_opt_6co {
 struct Interface *readin_config(char const *fname);
 
 /* radvd.c */
+int disable_ipv6_autoconfiguration(struct Interface * iface);
 int check_ip6_forwarding(void);
 int setup_iface(int sock, struct Interface *iface);
 
