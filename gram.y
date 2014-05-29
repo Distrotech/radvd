@@ -1071,6 +1071,7 @@ static struct Interface * readin_file(char * fname, FILE * in, char const * ifac
 		if (yyparse() != 0) {
 			flog(LOG_ERR, "Error: (%s) parsing or activating the config file.", fname);
 			free(iface);
+			iface = 0;
 		}
 		else {
 			dlog(LOG_DEBUG, 1, "config file, %s, syntax ok.", fname);
