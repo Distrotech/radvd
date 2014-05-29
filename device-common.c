@@ -158,7 +158,7 @@ int update_device_index(struct Interface *iface)
 	return 0;
 }
 
-int disable_ipv6_autoconfiguration(struct Interface * iface)
+int disable_ipv6_autoconfig(char const * iface)
 {
 	int value;
 	size_t size = sizeof(value);
@@ -166,7 +166,18 @@ int disable_ipv6_autoconfiguration(struct Interface * iface)
 	static int warned = 0;
 
 #ifdef __linux__
-	fp = fopen(PROC_SYS_IP6_AUTOCONFIG, "r");
+	char spath[64 + IFNAMSIZ];	/* XXX: magic constant */
+	if (snprintf(spath, sizeof(spath), PROC_SYS_IP6_AUTOCONFIG, iface) >= sizeof(spath))
+		return -1;
+
+	/* No path traversal */
+	if (!iface[0] || !strcmp(iface, ".") || !strcmp(iface, "..") || strchr(iface, '/'))
+		return -1;
+
+	if (access(spath, F_OK) != 0)
+		return -1;
+
+	fp = fopen(spath, "r");
 	if (fp) {
 		int rc = fscanf(fp, "%d", &value);
 		if (rc != 1) {
@@ -191,21 +202,28 @@ int disable_ipv6_autoconfiguration(struct Interface * iface)
 	}
 #endif
 
-#ifdef __linux__
 	if (!warned && value != 0) {
 		warned = 1;
-		flog(LOG_DEBUG, "IPv6 forwarding setting is: %u, should be 0", value);
-		return -1;
+		flog(LOG_DEBUG, "IPv6 autoconfig setting is: %u, should be 0", value);
 	}
-#else
-	if (!warned && value != 0) {
-		warned = 1;
-		flog(LOG_DEBUG, "IPv6 forwarding setting is: %u, should be 0", value);
-		return -1;
-	}
-#endif				/* __linux__ */
 
-	return 0;
+	int retval = -1;
+
+	fp = fopen(spath, "w");
+	if (fp) {
+		int const count = fprintf(fp, "0");
+		if (count == 1) {
+			retval = 0;
+			flog(LOG_DEBUG, "successfully forced IPv6 autoconfig setting to 0");
+		} else {
+			flog(LOG_DEBUG, "unable to force IPv6 autoconfig setting to 0");
+		}
+		fclose(fp);
+	} else {
+		flog(LOG_DEBUG, "unable to open %s in order to force IPv6 autoconfig setting to 0", spath);
+	}
+
+	return retval;
 }
 
 int check_ip6_forwarding(void)

@@ -606,6 +606,12 @@ int setup_iface(int sock, struct Interface *iface)
 		return -1;
 	}
 
+	/* Make sure this is diabled.  We don't want this interface to autoconfig using its
+	 * own advert messages. */
+	if (disable_ipv6_autoconfig(iface->Name)) {
+		return -1;
+	}
+
 	/* Save the first link local address seen on the specified interface to iface->if_addr */
 	if (setup_linklocal_addr(iface) < 0) {
 		return -1;
