@@ -157,20 +157,20 @@ int update_device_index(struct Interface *iface)
 
 int disable_ipv6_autoconfig(char const *iface)
 {
+	int retval = -1;
 	int value;
 	FILE *fp = NULL;
+	char * spath = 0;
 
 #ifdef __linux__
-	char spath[64 + IFNAMSIZ];	/* XXX: magic constant */
-	if (snprintf(spath, sizeof(spath), PROC_SYS_IP6_AUTOCONFIG, iface) >= sizeof(spath))
-		return -1;
+	spath = strdupf(PROC_SYS_IP6_AUTOCONFIG, iface);
 
 	/* No path traversal */
 	if (!iface[0] || !strcmp(iface, ".") || !strcmp(iface, "..") || strchr(iface, '/'))
-		return -1;
+		goto cleanup;
 
 	if (access(spath, F_OK) != 0)
-		return -1;
+		goto cleanup;
 
 	fp = fopen(spath, "r");
 	if (fp) {
@@ -194,7 +194,7 @@ int disable_ipv6_autoconfig(char const *iface)
 	if (!fp && sysctl(autoconf_sysctl, sizeof(autoconf_sysctl) / sizeof(autoconf_sysctl[0]), &value, &size, NULL, 0) < 0) {
 		flog(LOG_DEBUG,
 		     "Correct IPv6 autoconf sysctl branch not found, " "perhaps the kernel interface has changed?");
-		return (0);	/* this is of advisory value only */
+		goto cleanup;
 	}
 #endif
 
@@ -204,7 +204,6 @@ int disable_ipv6_autoconfig(char const *iface)
 		flog(LOG_DEBUG, "IPv6 autoconfig setting is: %u, should be 0", value);
 	}
 
-	int retval = -1;
 
 	if (value != 0) {
 		fp = fopen(spath, "w");
@@ -223,6 +222,11 @@ int disable_ipv6_autoconfig(char const *iface)
 	} else {
 		retval = 0;
 	}
+
+cleanup:
+
+	if (spath)
+		free(spath);
 
 	return retval;
 }

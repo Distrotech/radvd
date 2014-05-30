@@ -373,6 +373,7 @@ static const char *radvd_get_pidfile(void)
 #ifdef HAVE_ASPRINTF
 	static char *fn = NULL;
 	free(fn);
+	/* TODO: use strdupf */
 	asprintf(&fn, "%s", daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
 #else
 	static char fn[PATH_MAX];
@@ -773,7 +774,9 @@ static int check_confpath_perm(const char *username, const char *conf_path)
 		struct dirent *dirent = readdir(dir);
 		while (dirent) {
 			if (DT_LNK == dirent->d_type || DT_REG == dirent->d_type) {
-				int failed = check_conffile_perm(username, dirent->d_name);
+				char * conf_file_path = strdupf("%s/%s", conf_path, dirent->d_name);
+				int failed = check_conffile_perm(username, conf_file_path);
+				free(conf_file_path);
 				if (0 == failed) {
 					dlog(LOG_DEBUG, 5, "Permissions on %s ok", conf_path);
 				} else {
