@@ -15,24 +15,38 @@
 .\"
 .TH RADVD.CONF 5 "4 Jan 2011" "radvd @VERSION@" ""
 .SH NAME
-radvd.conf \- configuration file of the router advertisement daemon
+@PATH_RADVD_CONF@/*.conf \- configuration file(s) of the router advertisement daemon
 .B radvd
 .SH DESCRIPTION
-This file describes the information which is included in the router
+The file(s) describe the information which is included in the router
 advertisement (RA) of a specific interface.
 .P
-The file contains one or more interface definitions of the form:
+For each interface on which radvd is to send adverts, there is a file in the
+directory @PATH_RADVD_CONF@ containing the configuration for that
+interface.
+
+Example:
 
 .nf
-.BR "interface " "name " {
-	list of interface specific options
-	list of prefix definitions
-	list of clients (IPv6 addresses) to advertise to
-	list of route definitions
-	list of RDNSS definitions
-	list of DNSSL definitions
-	list of ABRO definitions
-.B };
+@PATH_RADVD_CONF@/eth0.conf
+@PATH_RADVD_CONF@/eth1.conf
+@PATH_RADVD_CONF@/eth2.conf
+.fi
+
+Note:
+
+The ".conf" extension is optional.
+
+Each file contains one interface definitions of the form:
+
+.nf
+list of interface specific options
+list of prefix definitions
+list of clients (IPv6 addresses) to advertise to
+list of route definitions
+list of RDNSS definitions
+list of DNSSL definitions
+list of ABRO definitions
 .fi
 
 All the possible interface specific options are detailed below.  Each
@@ -571,14 +585,11 @@ Both forms 32-bit unsigned version number corresponding to the set of informatio
 .SH EXAMPLES
 
 .nf
-interface eth0
+AdvSendAdvert on;
+prefix 2001:db8:0:1::/64
 {
-        AdvSendAdvert on;
-        prefix 2001:db8:0:1::/64
-        {
-                AdvOnLink on;
-                AdvAutonomous on;
-        };
+	AdvOnLink on;
+	AdvAutonomous on;
 };
 .fi
 
@@ -592,15 +603,12 @@ To support movement detection of Mobile IPv6 Mobile Nodes, the
 address of interface should be used instead of network prefix:
 
 .nf
-interface eth0
+AdvSendAdvert on;
+prefix 2001:db8:0:1::4/64
 {
-        AdvSendAdvert on;
-        prefix 2001:db8:0:1::4/64
-        {
-                AdvOnLink on;
-                AdvAutonomous on;
-                AdvRouterAddr on;
-        };
+	AdvOnLink on;
+	AdvAutonomous on;
+	AdvRouterAddr on;
 };
 .fi
 
@@ -613,24 +621,21 @@ a dynamic interface (e.g., Bluetooth), skip the interface if it is not
 active yet.
 
 .nf
-interface bnep0
+IgnoreIfMissing on;
+AdvSendAdvert on;
+
+# Advertise at least every 30 seconds
+MaxRtrAdvInterval 30;
+
+prefix 0:0:0:5678::/64
 {
-        IgnoreIfMissing on;
-        AdvSendAdvert on;
+	AdvOnLink on;
+	AdvAutonomous on;
+	Base6to4Interface ppp0;
 
-        # Advertise at least every 30 seconds
-        MaxRtrAdvInterval 30;
-
-        prefix 0:0:0:5678::/64
-        {
-                AdvOnLink on;
-                AdvAutonomous on;
-                Base6to4Interface ppp0;
-
-                # Very short lifetimes for dynamic addresses
-                AdvValidLifetime 300;
-                AdvPreferredLifetime 120;
-        };
+	# Very short lifetimes for dynamic addresses
+	AdvValidLifetime 300;
+	AdvPreferredLifetime 120;
 };
 .fi
 
@@ -646,19 +651,16 @@ current radvd releases, sending HUP is no longer mandatory when the link
 comes back up.
 
 .nf
-interface eth0
+AdvSendAdvert on;
+prefix 2001:db8:0:1::/64
 {
-        AdvSendAdvert on;
-        prefix 2001:db8:0:1::/64
-        {
-                AdvOnLink on;
-                AdvAutonomous on;
-        };
-        clients
-        {
-                fe80::21f:16ff:fe06:3aab;
-                fe80::21d:72ff:fe96:aaff;
-        };
+	AdvOnLink on;
+	AdvAutonomous on;
+};
+clients
+{
+	fe80::21f:16ff:fe06:3aab;
+	fe80::21d:72ff:fe96:aaff;
 };
 .fi
 
@@ -669,22 +671,20 @@ This may come in handy if you want to roll out IPv6 only partially because
 some clients are broken or untested.
 
 For ABRO support
+
 .nf
-interface lowpan0
-{
-	AdvSendAdvert on;
-	UnicastOnly on;
-	AdvCurHopLimit 255;
-	prefix 2001:0db8:0100:f101::/64 {
-		AdvOnLink on;
-		AdvAutonomous on;
-		AdvRouterAddr on;
-	};
-	abro fe80::a200:0:0:1/64 {
-		AdvVersionLow 10;
-		AdvVersionHigh 2;
-		AdvValidLifeTime 2;
-	};
+AdvSendAdvert on;
+UnicastOnly on;
+AdvCurHopLimit 255;
+prefix 2001:0db8:0100:f101::/64 {
+	AdvOnLink on;
+	AdvAutonomous on;
+	AdvRouterAddr on;
+};
+abro fe80::a200:0:0:1/64 {
+	AdvVersionLow 10;
+	AdvVersionHigh 2;
+	AdvValidLifeTime 2;
 };
 
 .SH FILES
