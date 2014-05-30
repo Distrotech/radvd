@@ -77,28 +77,27 @@ static volatile int sigterm_received = 0;
 static volatile int sigint_received = 0;
 static volatile int sigusr1_received = 0;
 
-void sighup_handler(int sig);
-void sigterm_handler(int sig);
-void sigint_handler(int sig);
-void sigusr1_handler(int sig);
-void timer_handler(int sock, struct Interface *iface);
-void config_interface(struct Interface *iface);
-void config_ifaces(struct Interface *ifaces);
-void kickoff_adverts(int sock, struct Interface *iface);
-void stop_advert_foo(struct Interface *iface, void *data);
-void stop_adverts(int sock, struct Interface *ifaces);
-void version(void);
-void usage(char const *pname);
-int drop_root_privileges(const char *);
-int check_conffile_perm(const char *, const char *);
-int check_confpath_perm(const char *, const char *);
-const char *radvd_get_pidfile(void);
-void setup_iface_foo(struct Interface *iface, void *data);
-void setup_ifaces(int sock, struct Interface *ifaces);
-void main_loop(int sock, struct Interface *ifaces, char const *conf_path);
-void reset_prefix_lifetimes_foo(struct Interface *iface, void *data);
-void reset_prefix_lifetimes(struct Interface *ifaces);
-struct Interface *reload_config(int sock, struct Interface *ifaces, char const *conf_path);
+static void sighup_handler(int sig);
+static void sigterm_handler(int sig);
+static void sigint_handler(int sig);
+static void sigusr1_handler(int sig);
+static void timer_handler(int sock, struct Interface *iface);
+static void config_interface(struct Interface *iface);
+static void kickoff_adverts(int sock, struct Interface *iface);
+static void stop_advert_foo(struct Interface *iface, void *data);
+static void stop_adverts(int sock, struct Interface *ifaces);
+static void version(void);
+static void usage(char const *pname);
+static int drop_root_privileges(const char *);
+static int check_conffile_perm(const char *, const char *);
+static int check_confpath_perm(const char *, const char *);
+static const char *radvd_get_pidfile(void);
+static void setup_iface_foo(struct Interface *iface, void *data);
+static void setup_ifaces(int sock, struct Interface *ifaces);
+static void main_loop(int sock, struct Interface *ifaces, char const *conf_path);
+static void reset_prefix_lifetimes_foo(struct Interface *iface, void *data);
+static void reset_prefix_lifetimes(struct Interface *ifaces);
+static struct Interface *reload_config(int sock, struct Interface *ifaces, char const *conf_path);
 
 int main(int argc, char *argv[])
 {
@@ -367,7 +366,7 @@ int main(int argc, char *argv[])
 }
 
 /* This function is copied from dpid.c (in libdaemon) and renamed. */
-const char *radvd_get_pidfile(void)
+static const char *radvd_get_pidfile(void)
 {
 #ifdef HAVE_ASPRINTF
 	static char *fn = NULL;
@@ -381,7 +380,7 @@ const char *radvd_get_pidfile(void)
 	return fn;
 }
 
-void main_loop(int sock, struct Interface *ifaces, char const *conf_path)
+static void main_loop(int sock, struct Interface *ifaces, char const *conf_path)
 {
 	struct pollfd fds[2];
 	sigset_t sigmask;
@@ -505,7 +504,7 @@ void main_loop(int sock, struct Interface *ifaces, char const *conf_path)
 	}
 }
 
-void timer_handler(int sock, struct Interface *iface)
+static void timer_handler(int sock, struct Interface *iface)
 {
 	dlog(LOG_DEBUG, 1, "timer_handler called for %s", iface->Name);
 
@@ -518,7 +517,7 @@ void timer_handler(int sock, struct Interface *iface)
 	reschedule_iface(iface, next);
 }
 
-void config_interface(struct Interface *iface)
+static void config_interface(struct Interface *iface)
 {
 	if (iface->AdvLinkMTU)
 		set_interface_linkmtu(iface->Name, iface->AdvLinkMTU);
@@ -530,7 +529,7 @@ void config_interface(struct Interface *iface)
 		set_interface_retranstimer(iface->Name, iface->AdvRetransTimer);
 }
 
-void kickoff_adverts(int sock, struct Interface *iface)
+static void kickoff_adverts(int sock, struct Interface *iface)
 {
 	/*
 	 *      send initial advertisement and set timers
@@ -552,7 +551,7 @@ void kickoff_adverts(int sock, struct Interface *iface)
 	reschedule_iface(iface, next);
 }
 
-void stop_advert_foo(struct Interface *iface, void *data)
+static void stop_advert_foo(struct Interface *iface, void *data)
 {
 	if (!iface->UnicastOnly) {
 		/* send a final advertisement with zero Router Lifetime */
@@ -563,7 +562,7 @@ void stop_advert_foo(struct Interface *iface, void *data)
 	}
 }
 
-void stop_adverts(int sock, struct Interface *ifaces)
+static void stop_adverts(int sock, struct Interface *ifaces)
 {
 	/*
 	 *      send final RA (a SHOULD in RFC4861 section 6.2.5)
@@ -618,7 +617,7 @@ int setup_iface(int sock, struct Interface *iface)
 	return 0;
 }
 
-void setup_iface_foo(struct Interface *iface, void *data)
+static void setup_iface_foo(struct Interface *iface, void *data)
 {
 	int sock = *(int *)data;
 
@@ -632,17 +631,16 @@ void setup_iface_foo(struct Interface *iface, void *data)
 		}
 	}
 
-	/* TODO: call these for changed ifaces only */
 	config_interface(iface);
 	kickoff_adverts(sock, iface);
 }
 
-void setup_ifaces(int sock, struct Interface *ifaces)
+static void setup_ifaces(int sock, struct Interface *ifaces)
 {
 	for_each_iface(ifaces, setup_iface_foo, &sock);
 }
 
-struct Interface *reload_config(int sock, struct Interface *ifaces, char const *conf_path)
+static struct Interface *reload_config(int sock, struct Interface *ifaces, char const *conf_path)
 {
 	free_ifaces(ifaces);
 
@@ -662,12 +660,12 @@ struct Interface *reload_config(int sock, struct Interface *ifaces, char const *
 	return ifaces;
 }
 
-void sighup_handler(int sig)
+static void sighup_handler(int sig)
 {
 	sighup_received = 1;
 }
 
-void sigterm_handler(int sig)
+static void sigterm_handler(int sig)
 {
 	++sigterm_received;
 
@@ -676,7 +674,7 @@ void sigterm_handler(int sig)
 	}
 }
 
-void sigint_handler(int sig)
+static void sigint_handler(int sig)
 {
 	++sigint_received;
 
@@ -685,12 +683,12 @@ void sigint_handler(int sig)
 	}
 }
 
-void sigusr1_handler(int sig)
+static void sigusr1_handler(int sig)
 {
 	sigusr1_received = 1;
 }
 
-void reset_prefix_lifetimes_foo(struct Interface *iface, void *data)
+static void reset_prefix_lifetimes_foo(struct Interface *iface, void *data)
 {
 	flog(LOG_INFO, "Resetting prefix lifetimes on %s", iface->Name);
 
@@ -708,12 +706,12 @@ void reset_prefix_lifetimes_foo(struct Interface *iface, void *data)
 	}
 }
 
-void reset_prefix_lifetimes(struct Interface *ifaces)
+static void reset_prefix_lifetimes(struct Interface *ifaces)
 {
 	for_each_iface(ifaces, reset_prefix_lifetimes_foo, 0);
 }
 
-int drop_root_privileges(const char *username)
+static int drop_root_privileges(const char *username)
 {
 	struct passwd *pw = getpwnam(username);
 	if (pw) {
@@ -728,7 +726,7 @@ int drop_root_privileges(const char *username)
 	return 0;
 }
 
-int check_conffile_perm(const char *username, const char *conf_file)
+static int check_conffile_perm(const char *username, const char *conf_file)
 {
 	FILE *fp = fopen(conf_file, "r");
 	if (fp == NULL) {
@@ -761,13 +759,13 @@ int check_conffile_perm(const char *username, const char *conf_file)
 	return 0;
 }
 
-int check_confpath_perm(const char *username, const char *conf_path)
+static int check_confpath_perm(const char *username, const char *conf_path)
 {
 	/* TODO: call check_conffile_parm for each file in conf_path */
 	return 0;
 }
 
-void version(void)
+static void version(void)
 {
 	fprintf(stderr, "Version: %s\n\n", VERSION);
 	fprintf(stderr, "Compiled in settings:\n");
@@ -780,7 +778,7 @@ void version(void)
 	exit(1);
 }
 
-void usage(char const *pname)
+static void usage(char const *pname)
 {
 	fprintf(stderr, "usage: %s %s\n", pname, usage_str);
 	exit(1);
