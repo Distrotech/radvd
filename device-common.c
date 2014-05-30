@@ -209,18 +209,22 @@ int disable_ipv6_autoconfig(char const * iface)
 
 	int retval = -1;
 
-	fp = fopen(spath, "w");
-	if (fp) {
-		int const count = fprintf(fp, "0");
-		if (count == 1) {
-			retval = 0;
-			flog(LOG_DEBUG, "successfully forced IPv6 autoconfig setting to 0");
+	if (value != 0) {
+		fp = fopen(spath, "w");
+		if (fp) {
+			int const count = fprintf(fp, "0");
+			if (count == 1) {
+				retval = 0;
+				flog(LOG_DEBUG, "successfully forced IPv6 autoconfig setting to 0");
+			} else {
+				flog(LOG_DEBUG, "unable to force IPv6 autoconfig setting to 0");
+			}
+			fclose(fp);
 		} else {
-			flog(LOG_DEBUG, "unable to force IPv6 autoconfig setting to 0");
+			flog(LOG_DEBUG, "unable to open %s in order to force IPv6 autoconfig setting to 0", spath);
 		}
-		fclose(fp);
 	} else {
-		flog(LOG_DEBUG, "unable to open %s in order to force IPv6 autoconfig setting to 0", spath);
+		retval = 0;
 	}
 
 	return retval;
