@@ -134,14 +134,12 @@ int privsep_init(void)
 	}
 
 	if (pid == 0) {
-		int nullfd;
-
 		/* This will be the privileged child */
 		close(pipefds[1]);
 		pfd = pipefds[0];
 
 		/* Detach from stdio */
-		nullfd = open("/dev/null", O_RDONLY);
+		int nullfd = open("/dev/null", O_RDONLY);
 		if (nullfd < 0) {
 			perror("/dev/null");
 			close(pfd);
