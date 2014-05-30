@@ -20,8 +20,7 @@
 #include "pathnames.h"
 
 static int set_interface_var(const char *iface, const char *var, const char *name, uint32_t val);
-int privsep_set(const char *iface, const char *var, uint32_t val);
-void privsep_read_loop(void);
+static void privsep_read_loop(void);
 
 /* For reading or writing, depending on process */
 static int pfd = -1;
@@ -42,7 +41,7 @@ struct privsep_command {
 };
 
 /* Privileged read loop */
-void privsep_read_loop(void)
+static void privsep_read_loop(void)
 {
 	while (1) {
 		struct privsep_command cmd;
