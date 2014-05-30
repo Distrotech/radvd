@@ -25,6 +25,8 @@
 #include <poll.h>
 #include <libdaemon/dfork.h>
 #include <libdaemon/dpid.h>
+#include <sys/types.h>
+#include <dirent.h>
 
 #ifdef HAVE_GETOPT_LONG
 
@@ -233,7 +235,7 @@ int main(int argc, char *argv[])
 	/* check that 'other' cannot write the file
 	 * for non-root, also that self/own group can't either
 	 */
-	if (check_confpath_perm(username, conf_path) < 0) {
+	if (check_confpath_perm(username, conf_path) != 0) {
 		if (get_debuglevel() == 0) {
 			flog(LOG_ERR, "Exiting, permissions on conf_file invalid.");
 			exit(1);
@@ -739,10 +741,14 @@ static int check_conffile_perm(const char *username, const char *conf_file)
 		username = "root";
 
 	struct passwd *pw = getpwnam(username);
+	if (!pw) {
+		return -1;
+	}
 
 	struct stat stbuf;
-	if (stat(conf_file, &stbuf) || pw == NULL)
+	if (0 != stat(conf_file, &stbuf)) {
 		return -1;
+	}
 
 	if (stbuf.st_mode & S_IWOTH) {
 		flog(LOG_ERR, "Insecure file permissions (writable by others): %s", conf_file);
@@ -761,8 +767,33 @@ static int check_conffile_perm(const char *username, const char *conf_file)
 
 static int check_confpath_perm(const char *username, const char *conf_path)
 {
-	/* TODO: call check_conffile_parm for each file in conf_path */
-	return 0;
+	int fails = 0;
+	DIR * dir = opendir(conf_path);
+	if (dir) {
+		struct dirent *dirent = readdir(dir);
+		while (dirent) {
+			if (DT_LNK == dirent->d_type || DT_REG == dirent->d_type) {
+				int failed = check_conffile_perm(username, dirent->d_name);
+				if (0 == failed) {
+					dlog(LOG_DEBUG, 5, "Permissions on %s ok", conf_path);
+				} else {
+					++fails;
+				}
+			}
+			dirent = readdir(dir);
+		}
+		closedir(dir);
+	}
+	else {
+		dlog(LOG_DEBUG, 1, "Unable to open config path, %s: %s", conf_path, strerror(errno));
+	}
+
+
+	if (0 == fails) {
+		dlog(LOG_DEBUG, 4, "config file permissions ok");
+	}
+
+	return fails;
 }
 
 static void version(void)
