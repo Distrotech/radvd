@@ -370,15 +370,10 @@ int main(int argc, char *argv[])
 /* This function is copied from dpid.c (in libdaemon) and renamed. */
 static const char *radvd_get_pidfile(void)
 {
-#ifdef HAVE_ASPRINTF
 	static char *fn = NULL;
-	free(fn);
-	/* TODO: use strdupf */
-	asprintf(&fn, "%s", daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
-#else
-	static char fn[PATH_MAX];
-	snprintf(fn, sizeof(fn), "%s", daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
-#endif
+	if (fn)
+		free(fn);
+	fn = strdupf("%s", daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
 
 	return fn;
 }
