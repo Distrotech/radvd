@@ -18,6 +18,8 @@
 #include "radvd.h"
 
 static int ensure_iface_setup(int sock, struct Interface *iface);
+static int really_send(int sock, struct in6_addr const *dest, unsigned int if_index, struct in6_addr if_addr, unsigned char *buff,
+		size_t len);
 
 /*
  * Sends an advertisement for all specified clients of this interface
@@ -81,7 +83,7 @@ static void send_ra_inc_len(size_t * len, int add)
 	}
 }
 
-void add_sllao(unsigned char *buff, size_t * len, struct Interface *iface)
+static void add_sllao(unsigned char *buff, size_t * len, struct Interface *iface)
 {
 	/* *INDENT-OFF* */
 	/*
@@ -506,7 +508,7 @@ int send_ra(int sock, struct Interface *iface, struct in6_addr const *dest)
 	return 0;
 }
 
-int really_send(int sock, struct in6_addr const *dest, unsigned int if_index, struct in6_addr if_addr, unsigned char *buff,
+static int really_send(int sock, struct in6_addr const *dest, unsigned int if_index, struct in6_addr if_addr, unsigned char *buff,
 		size_t len)
 {
 	struct sockaddr_in6 addr;
