@@ -245,7 +245,6 @@ int check_device(int sock, struct Interface *);
 int setup_linklocal_addr(struct Interface *);
 int setup_allrouters_membership(int sock, struct Interface *);
 int get_v4addr(const char *, unsigned int *);
-int set_interface_var(const char *, const char *, const char *, uint32_t);
 int set_interface_linkmtu(const char *, uint32_t);
 int set_interface_curhlim(const char *, uint8_t);
 int set_interface_reachtime(const char *, uint32_t);
