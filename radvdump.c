@@ -32,10 +32,10 @@ struct option prog_opt[] = {
 
 char *pname;
 
-void version(void);
-void usage(void);
-void print_ff(unsigned char *, int, struct sockaddr_in6 *, int, unsigned int, int);
-void print_preferences(int);
+static void version(void);
+static void usage(void);
+static void print_ff(unsigned char *, int, struct sockaddr_in6 *, int, unsigned int, int);
+static void print_preferences(int);
 
 int main(int argc, char *argv[])
 {
@@ -136,7 +136,7 @@ int main(int argc, char *argv[])
 	exit(0);
 }
 
-void print_ff(unsigned char *msg, int len, struct sockaddr_in6 *addr, int hoplimit, unsigned int if_index, int edefs)
+static void print_ff(unsigned char *msg, int len, struct sockaddr_in6 *addr, int hoplimit, unsigned int if_index, int edefs)
 {
 	/* XXX: hoplimit not being used for anything here.. */
 	int orig_len = len;
@@ -455,7 +455,7 @@ void print_ff(unsigned char *msg, int len, struct sockaddr_in6 *addr, int hoplim
 	fflush(stdout);
 }
 
-void print_preferences(int p)
+static void print_preferences(int p)
 {
 	switch (p) {
 	case 0:
@@ -473,15 +473,16 @@ void print_preferences(int p)
 	}
 }
 
-void version(void)
+static void version(void)
 {
 	fprintf(stderr, "Version: %s\n\n", VERSION);
 	fprintf(stderr, "Please send bug reports and suggestions to %s\n", CONTACT_EMAIL);
 	exit(1);
 }
 
-void usage(void)
+static void usage(void)
 {
 	fprintf(stderr, "usage: %s %s\n", pname, usage_str);
 	exit(1);
 }
+
