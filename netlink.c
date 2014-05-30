@@ -44,7 +44,7 @@ int process_netlink_msg(int sock, void * interfaces)
 
 	len = radvd_recvmsg(sock, &msg, 0);
 	if (len == -1) {
-		flog(LOG_ERR, "recvmsg failed: %s", strerror(errno));
+		flog(LOG_ERR, "netlink: recvmsg failed: %s", strerror(errno));
 	}
 
 	for (nh = (struct nlmsghdr *)buf; NLMSG_OK(nh, len); nh = NLMSG_NEXT(nh, len)) {
@@ -54,7 +54,7 @@ int process_netlink_msg(int sock, void * interfaces)
 			return rc;
 
 		if (nh->nlmsg_type == NLMSG_ERROR) {
-			flog(LOG_ERR, "%s:%d Some type of netlink error.", __FILE__, __LINE__);
+			flog(LOG_ERR, "netlink: unknown error");
 			abort();
 		}
 
@@ -68,10 +68,10 @@ int process_netlink_msg(int sock, void * interfaces)
 			for (; RTA_OK(rta, rta_len); rta = RTA_NEXT(rta, rta_len)) {
 				if (rta->rta_type == IFLA_OPERSTATE || rta->rta_type == IFLA_LINKMODE) {
 					if (ifinfo->ifi_flags & IFF_RUNNING) {
-						dlog(LOG_DEBUG, 3, "%s, ifindex %d, flags is running", ifname,
+						dlog(LOG_DEBUG, 3, "netlink: %s, ifindex %d, flags is running", ifname,
 						     ifinfo->ifi_index);
 					} else {
-						dlog(LOG_DEBUG, 3, "%s, ifindex %d, flags is *NOT* running", ifname,
+						dlog(LOG_DEBUG, 3, "netlink: %s, ifindex %d, flags is *NOT* running", ifname,
 						     ifinfo->ifi_index);
 					}
 					++rc;
@@ -85,16 +85,24 @@ int process_netlink_msg(int sock, void * interfaces)
 				reschedule_iface(iface, 0);
 			}
 
-		} else if (nh->nlmsg_type == RTM_DELADDR) {
+		} else if (nh->nlmsg_type == RTM_NEWADDR || nh->nlmsg_type == RTM_DELADDR) {
 			struct ifaddrmsg *ifaddr = (struct ifaddrmsg *)NLMSG_DATA(nh);
 			const char *ifname = radvd_if_indextoname(ifaddr->ifa_index, ifnamebuf);
 
-			dlog(LOG_DEBUG, 3, "%s, ifindex %d, del address", ifname, ifaddr->ifa_index);
-		} else if (nh->nlmsg_type == RTM_NEWADDR) {
-			struct ifaddrmsg *ifaddr = (struct ifaddrmsg *)NLMSG_DATA(nh);
-			const char *ifname = radvd_if_indextoname(ifaddr->ifa_index, ifnamebuf);
+			switch (nh->nlmsg_type) {
 
-			dlog(LOG_DEBUG, 3, "%s, ifindex %d, new address", ifname, ifaddr->ifa_index);
+			case RTM_DELADDR:
+				dlog(LOG_DEBUG, 3, "netlink: %s, ifindex %d, address deleted", ifname, ifaddr->ifa_index);
+				break;
+
+			case RTM_NEWADDR:
+				dlog(LOG_DEBUG, 3, "netlink: %s, ifindex %d, new address", ifname, ifaddr->ifa_index);
+				break;
+
+			default:
+				flog(LOG_ERR, "netlink: unhandled event: %d", nh->nlmsg_type);
+				break;
+			}
 
 			++rc;
 
