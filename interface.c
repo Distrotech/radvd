@@ -320,7 +320,7 @@ void free_iface_list(struct Interface *iface)
 
 void free_ifaces(struct Interface * ifaces)
 {
-	flog(LOG_INFO, "Freeing Interfaces");
+	dlog(LOG_DEBUG, 3, "Freeing Interfaces");
 
 	free_iface_list(ifaces);
 }
