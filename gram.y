@@ -1050,20 +1050,20 @@ static void cleanup(void)
 		free(abro);
 }
 
-static struct Interface * readin_file(char * fname, FILE * in, char const * iface_name)
+static struct Interface * readin_file(char * fname, FILE * in, char * iface_name)
 {
 	/* Global parser var iface. */
 	iface = malloc(sizeof(struct Interface));
 
 	if (iface) {
 		iface_init_defaults(iface);
+
+		char * dot_conf = strrchr(iface_name, '.');
+		if (dot_conf && 0 == strcasecmp(dot_conf, ".conf")) {
+			*dot_conf = '\0';
+		}
 		strncpy(iface->Name, iface_name, sizeof(iface->Name));
 		iface->Name[sizeof(iface->Name) -1] = '\0';
-
-		char * dot = strchr(iface->Name, '.');
-		if (dot) {
-			*dot = '\0';
-		}
 
 		yyset_in(in);
 		yycolumn = 1;
