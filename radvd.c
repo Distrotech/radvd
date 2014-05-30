@@ -102,11 +102,10 @@ struct Interface *reload_config(int sock, struct Interface *ifaces, char const *
 
 int main(int argc, char *argv[])
 {
-	struct Interface *ifaces = NULL;
-	int sock = -1;
-	int c, log_method;
-	char *logfile;
-	int facility;
+	int c;
+	int log_method = L_STDERR_SYSLOG;
+	char *logfile = PATH_RADVD_LOG;
+	int facility = LOG_FACILITY;
 	char *username = NULL;
 	char *chrootdir = NULL;
 	int configtest = 0;
@@ -120,10 +119,7 @@ int main(int argc, char *argv[])
 
 	srand((unsigned int)time(NULL));
 
-	log_method = L_STDERR_SYSLOG;
-	logfile = PATH_RADVD_LOG;
 	char const *conf_path = PATH_RADVD_CONF;
-	facility = LOG_FACILITY;
 	daemon_pid_file_ident = PATH_RADVD_PID;	/* libdaemon defines daemon_pid_file_ident */
 
 	/* parse args */
@@ -247,6 +243,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* parse config file */
+	struct Interface *ifaces = NULL;
 	if ((ifaces = readin_config(conf_path)) == 0) {
 		flog(LOG_ERR, "Exiting, failed to read config file.");
 		exit(1);
@@ -258,7 +255,7 @@ int main(int argc, char *argv[])
 	}
 
 	/* get a raw socket for sending and receiving ICMPv6 messages */
-	sock = open_icmpv6_socket();
+	int sock = open_icmpv6_socket();
 	if (sock < 0) {
 		perror("open_icmpv6_socket");
 		exit(1);
@@ -510,15 +507,13 @@ void main_loop(int sock, struct Interface *ifaces, char const *conf_path)
 
 void timer_handler(int sock, struct Interface *iface)
 {
-	double next;
-
 	dlog(LOG_DEBUG, 1, "timer_handler called for %s", iface->Name);
 
 	if (send_ra_forall(sock, iface, NULL) != 0) {
 		dlog(LOG_DEBUG, 4, "send_ra_forall failed on interface %s", iface->Name);
 	}
 
-	next = rand_between(iface->MinRtrAdvInterval, iface->MaxRtrAdvInterval);
+	double next = rand_between(iface->MinRtrAdvInterval, iface->MaxRtrAdvInterval);
 
 	reschedule_iface(iface, next);
 }
@@ -537,8 +532,6 @@ void config_interface(struct Interface *iface)
 
 void kickoff_adverts(int sock, struct Interface *iface)
 {
-	double next;		/* TODO: double? */
-
 	/*
 	 *      send initial advertisement and set timers
 	 */
@@ -555,18 +548,17 @@ void kickoff_adverts(int sock, struct Interface *iface)
 		dlog(LOG_DEBUG, 4, "send_ra_forall failed on interface %s", iface->Name);
 	}
 
-	next = min(MAX_INITIAL_RTR_ADVERT_INTERVAL, iface->MaxRtrAdvInterval);
+	double next = min(MAX_INITIAL_RTR_ADVERT_INTERVAL, iface->MaxRtrAdvInterval);
 	reschedule_iface(iface, next);
 }
 
 void stop_advert_foo(struct Interface *iface, void *data)
 {
-	int sock = *(int *)data;
-
 	if (!iface->UnicastOnly) {
 		/* send a final advertisement with zero Router Lifetime */
 		dlog(LOG_DEBUG, 4, "stopping all adverts on %s.", iface->Name);
 		iface->cease_adv = 1;
+		int sock = *(int *)data;
 		send_ra_forall(sock, iface, NULL);
 	}
 }
@@ -700,13 +692,11 @@ void sigusr1_handler(int sig)
 
 void reset_prefix_lifetimes_foo(struct Interface *iface, void *data)
 {
-	struct AdvPrefix *prefix;
-	char pfx_str[INET6_ADDRSTRLEN];
-
 	flog(LOG_INFO, "Resetting prefix lifetimes on %s", iface->Name);
 
-	for (prefix = iface->AdvPrefixList; prefix; prefix = prefix->next) {
+	for (struct AdvPrefix *prefix = iface->AdvPrefixList; prefix; prefix = prefix->next) {
 		if (prefix->DecrementLifetimesFlag) {
+			char pfx_str[INET6_ADDRSTRLEN];
 			addrtostr(&prefix->Prefix, pfx_str, sizeof(pfx_str));
 			dlog(LOG_DEBUG, 4, "%s/%u%%%s plft reset from %u to %u secs", pfx_str, prefix->PrefixLen,
 			     iface->Name, prefix->curr_preferredlft, prefix->AdvPreferredLifetime);
@@ -725,8 +715,7 @@ void reset_prefix_lifetimes(struct Interface *ifaces)
 
 int drop_root_privileges(const char *username)
 {
-	struct passwd *pw = NULL;
-	pw = getpwnam(username);
+	struct passwd *pw = getpwnam(username);
 	if (pw) {
 		if (initgroups(username, pw->pw_gid) != 0 || setgid(pw->pw_gid) != 0 || setuid(pw->pw_uid) != 0) {
 			flog(LOG_ERR, "Couldn't change to '%.32s' uid=%d gid=%d", username, pw->pw_uid, pw->pw_gid);
@@ -741,10 +730,7 @@ int drop_root_privileges(const char *username)
 
 int check_conffile_perm(const char *username, const char *conf_file)
 {
-	struct stat stbuf;
-	struct passwd *pw = NULL;
 	FILE *fp = fopen(conf_file, "r");
-
 	if (fp == NULL) {
 		flog(LOG_ERR, "can't open %s: %s", conf_file, strerror(errno));
 		return -1;
@@ -754,8 +740,9 @@ int check_conffile_perm(const char *username, const char *conf_file)
 	if (!username)
 		username = "root";
 
-	pw = getpwnam(username);
+	struct passwd *pw = getpwnam(username);
 
+	struct stat stbuf;
 	if (stat(conf_file, &stbuf) || pw == NULL)
 		return -1;
 

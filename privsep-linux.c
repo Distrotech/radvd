@@ -43,11 +43,9 @@ struct privsep_command {
 /* Privileged read loop */
 void privsep_read_loop(void)
 {
-	struct privsep_command cmd;
-	int ret;
-
 	while (1) {
-		ret = readn(pfd, &cmd, sizeof(cmd));
+		struct privsep_command cmd;
+		int ret = readn(pfd, &cmd, sizeof(cmd));
 		if (ret <= 0) {
 			/* Error or EOF, give up */
 			if (ret < 0) {
@@ -120,17 +118,16 @@ void privsep_read_loop(void)
 int privsep_init(void)
 {
 	int pipefds[2];
-	pid_t pid;
 
 	if (pipe(pipefds) != 0) {
 		flog(LOG_ERR, "Couldn't create privsep pipe.");
-		return (-1);
+		return -1;
 	}
 
-	pid = fork();
+	pid_t pid = fork();
 	if (pid == -1) {
 		flog(LOG_ERR, "Couldn't fork for privsep.");
-		return (-1);
+		return -1;
 	}
 
 	if (pid == 0) {
@@ -175,7 +172,7 @@ int privsep_interface_linkmtu(const char *iface, uint32_t mtu)
 	cmd.val = mtu;
 
 	if (writen(pfd, &cmd, sizeof(cmd)) != sizeof(cmd))
-		return (-1);
+		return -1;
 	return 0;
 }
 
@@ -185,8 +182,10 @@ int privsep_interface_curhlim(const char *iface, uint32_t hlim)
 	cmd.type = SET_INTERFACE_CURHLIM;
 	strncpy(cmd.iface, iface, sizeof(cmd.iface));
 	cmd.val = hlim;
+
 	if (writen(pfd, &cmd, sizeof(cmd)) != sizeof(cmd))
-		return (-1);
+		return -1;
+
 	return 0;
 }
 
@@ -196,8 +195,10 @@ int privsep_interface_reachtime(const char *iface, uint32_t rtime)
 	cmd.type = SET_INTERFACE_REACHTIME;
 	strncpy(cmd.iface, iface, sizeof(cmd.iface));
 	cmd.val = rtime;
+
 	if (writen(pfd, &cmd, sizeof(cmd)) != sizeof(cmd))
-		return (-1);
+		return -1;
+
 	return 0;
 }
 
@@ -207,7 +208,9 @@ int privsep_interface_retranstimer(const char *iface, uint32_t rettimer)
 	cmd.type = SET_INTERFACE_RETRANSTIMER;
 	strncpy(cmd.iface, iface, sizeof(cmd.iface));
 	cmd.val = rettimer;
+
 	if (writen(pfd, &cmd, sizeof(cmd)) != sizeof(cmd))
-		return (-1);
+		return -1;
+
 	return 0;
 }

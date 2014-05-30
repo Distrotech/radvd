@@ -34,20 +34,18 @@
 
 int process_netlink_msg(int sock, void * interfaces)
 {
-	int len;
+	int rc = 0;
+
 	char buf[4096];
 	struct iovec iov = { buf, sizeof(buf) };
 	struct sockaddr_nl sa;
 	struct msghdr msg = { (void *)&sa, sizeof(sa), &iov, 1, NULL, 0, 0 };
-	struct nlmsghdr *nh;
-	int rc = 0;
-
-	len = radvd_recvmsg(sock, &msg, 0);
+	int len = radvd_recvmsg(sock, &msg, 0);
 	if (len == -1) {
 		flog(LOG_ERR, "netlink: recvmsg failed: %s", strerror(errno));
 	}
 
-	for (nh = (struct nlmsghdr *)buf; NLMSG_OK(nh, len); nh = NLMSG_NEXT(nh, len)) {
+	for (struct nlmsghdr * nh = (struct nlmsghdr *)buf; NLMSG_OK(nh, len); nh = NLMSG_NEXT(nh, len)) {
 		char ifnamebuf[IF_NAMESIZE];
 		/* The end of multipart message. */
 		if (nh->nlmsg_type == NLMSG_DONE)
@@ -119,11 +117,8 @@ int process_netlink_msg(int sock, void * interfaces)
 
 int netlink_socket(void)
 {
-	int rc, sock;
+	int sock = radvd_socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
 	unsigned int val = 1;
-	struct sockaddr_nl snl;
-
-	sock = radvd_socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
 	if (sock == -1) {
 		flog(LOG_ERR, "Unable to open netlink socket: %s", strerror(errno));
 	}
@@ -132,11 +127,12 @@ int netlink_socket(void)
 		flog(LOG_ERR, "Unable to setsockopt NETLINK_NO_ENOBUFS: %s", strerror(errno));
 	}
 #endif
+	struct sockaddr_nl snl;
 	memset(&snl, 0, sizeof(snl));
 	snl.nl_family = AF_NETLINK;
 	snl.nl_groups = RTMGRP_LINK | RTMGRP_IPV6_IFADDR;
 
-	rc = radvd_bind(sock, (struct sockaddr *)&snl, sizeof(snl));
+	int const rc = radvd_bind(sock, (struct sockaddr *)&snl, sizeof(snl));
 	if (rc == -1) {
 		flog(LOG_ERR, "Unable to bind netlink socket: %s", strerror(errno));
 		close(sock);
@@ -145,3 +141,4 @@ int netlink_socket(void)
 
 	return sock;
 }
+

@@ -91,8 +91,6 @@ void dnssl_init_defaults(struct AdvDNSSL *dnssl, struct Interface *iface)
 
 int check_iface(struct Interface *iface)
 {
-	struct AdvPrefix *prefix;
-	struct AdvRoute *route;
 	int res = 0;
 	int MIPv6 = 0;
 
@@ -102,7 +100,7 @@ int check_iface(struct Interface *iface)
 		flog(LOG_INFO, "using Mobile IPv6 extensions");
 	}
 
-	prefix = iface->AdvPrefixList;
+	struct AdvPrefix *prefix = iface->AdvPrefixList;
 	while (!MIPv6 && prefix) {
 		if (prefix->AdvRouterAddr) {
 			MIPv6 = 1;
@@ -204,8 +202,7 @@ int check_iface(struct Interface *iface)
 		prefix = prefix->next;
 	}
 
-	route = iface->AdvRouteList;
-
+	struct AdvRoute *route = iface->AdvRouteList;
 	while (route) {
 		if (route->PrefixLen > MAX_PrefixLen) {
 			flog(LOG_ERR, "invalid route prefix length (%u) for %s", route->PrefixLen, iface->Name);
@@ -269,14 +266,10 @@ void free_iface_list(struct Interface *iface)
 {
 	while (iface) {
 		struct Interface *next_iface = iface->next;
-		struct AdvPrefix *prefix;
-		struct AdvRoute *route;
-		struct AdvRDNSS *rdnss;
-		struct AdvDNSSL *dnssl;
 
 		dlog(LOG_DEBUG, 4, "freeing interface %s", iface->Name);
 
-		prefix = iface->AdvPrefixList;
+		struct AdvPrefix *prefix = iface->AdvPrefixList;
 		while (prefix) {
 			struct AdvPrefix *next_prefix = prefix->next;
 
@@ -284,7 +277,7 @@ void free_iface_list(struct Interface *iface)
 			prefix = next_prefix;
 		}
 
-		route = iface->AdvRouteList;
+		struct AdvRoute *route = iface->AdvRouteList;
 		while (route) {
 			struct AdvRoute *next_route = route->next;
 
@@ -292,7 +285,7 @@ void free_iface_list(struct Interface *iface)
 			route = next_route;
 		}
 
-		rdnss = iface->AdvRDNSSList;
+		struct AdvRDNSS *rdnss = iface->AdvRDNSSList;
 		while (rdnss) {
 			struct AdvRDNSS *next_rdnss = rdnss->next;
 
@@ -300,12 +293,11 @@ void free_iface_list(struct Interface *iface)
 			rdnss = next_rdnss;
 		}
 
-		dnssl = iface->AdvDNSSLList;
+		struct AdvDNSSL *dnssl = iface->AdvDNSSLList;
 		while (dnssl) {
 			struct AdvDNSSL *next_dnssl = dnssl->next;
-			int i;
 
-			for (i = 0; i < dnssl->AdvDNSSLNumber; i++)
+			for (int i = 0; i < dnssl->AdvDNSSLNumber; i++)
 				free(dnssl->AdvDNSSLSuffixes[i]);
 			free(dnssl->AdvDNSSLSuffixes);
 			free(dnssl);
