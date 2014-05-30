@@ -224,6 +224,15 @@ int main(int argc, char *argv[])
 
 	if (!configtest) {
 		flog(LOG_INFO, "version %s started", VERSION);
+
+		/* Calling privsep here, before opening the socket and reading the config
+		 * file, ensures we're not going to be wasting resources in the privsep
+		 * process. */
+		dlog(LOG_DEBUG, 3, "Initializing privsep");
+		if (privsep_init() < 0) {
+			flog(LOG_INFO, "Failed to initialize privsep.");
+			exit(1);
+		}
 	}
 
 	/* check that 'other' cannot write the file
@@ -333,12 +342,6 @@ int main(int argc, char *argv[])
 		}
 
 		dlog(LOG_DEBUG, 3, "radvd PID is %d", getpid());
-	}
-
-	dlog(LOG_DEBUG, 3, "Initializing privsep");
-	if (privsep_init() < 0) {
-		flog(LOG_INFO, "Failed to initialize privsep.");
-		exit(1);
 	}
 
 	if (username) {
