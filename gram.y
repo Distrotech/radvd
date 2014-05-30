@@ -14,6 +14,7 @@
  */
 
 %defines
+%locations
 
 %{
 #include "config.h"
@@ -24,16 +25,10 @@
 #include <sys/types.h>
 #include <dirent.h>
 #include <errno.h>
-
+#define YYERROR_VERBOSE 1
 static int countbits(int b);
 static int count_mask(struct sockaddr_in6 *m);
 static struct in6_addr get_prefix6(struct in6_addr const *addr, struct in6_addr const *mask);
-
-void yyerror(char const * msg);
-void yyerror(char const * msg)
-{
-	fprintf(stderr, "%s\n", msg);
-}
 
 #if 0 /* no longer necessary? */
 #ifndef HAVE_IN6_ADDR_S6_ADDR
@@ -175,6 +170,7 @@ static struct AdvLowpanCo *lowpanco;
 static struct AdvAbro  *abro;
 static void cleanup(void);
 #define ABORT	do { cleanup(); YYABORT; } while (0);
+static void yyerror(char const * msg);
 %}
 
 %%
@@ -931,7 +927,6 @@ abrohead	: T_ABRO IPV6ADDR '/' NUMBER
 		{
 			if ($4 > MAX_PrefixLen)
 			{
-				/* TODO: print the locations. */
 				flog(LOG_ERR, "Error: (%s:%d) invalid abro prefix length %d", filename, @1.first_line, $4);
 				ABORT;
 			}
@@ -1129,5 +1124,14 @@ struct Interface * readin_config(char const *dname)
 	}
 
 	return retval;
+}
+
+static void yyerror(char const * msg)
+{
+	fprintf(stderr, "%s:%d:%d: error: %s\n",
+		filename,
+		yylloc.first_line,
+		yylloc.first_column,
+		msg);
 }
 
