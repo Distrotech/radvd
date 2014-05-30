@@ -44,7 +44,7 @@ int update_device_info(struct Interface *iface)
 		goto ret;
 	}
 
-	for (struct ifaddrs *ifa = addresses; ifa != NULL; ifa = ifa->ifa_next) {
+	for (struct ifaddrs * ifa = addresses; ifa != NULL; ifa = ifa->ifa_next) {
 		if (strcmp(ifa->ifa_name, iface->Name) != 0)
 			continue;
 

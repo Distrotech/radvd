@@ -432,7 +432,7 @@ void main_loop(int sock, struct Interface *ifaces, char const *conf_path)
 	for (;;) {
 		struct timespec *tsp = 0;
 
-		struct Interface * next_iface_to_expire = find_iface_by_time(ifaces);
+		struct Interface *next_iface_to_expire = find_iface_by_time(ifaces);
 		if (next_iface_to_expire) {
 			static struct timespec ts;
 			int timeout = next_time_msec(next_iface_to_expire);
@@ -694,7 +694,7 @@ void reset_prefix_lifetimes_foo(struct Interface *iface, void *data)
 {
 	flog(LOG_INFO, "Resetting prefix lifetimes on %s", iface->Name);
 
-	for (struct AdvPrefix *prefix = iface->AdvPrefixList; prefix; prefix = prefix->next) {
+	for (struct AdvPrefix * prefix = iface->AdvPrefixList; prefix; prefix = prefix->next) {
 		if (prefix->DecrementLifetimesFlag) {
 			char pfx_str[INET6_ADDRSTRLEN];
 			addrtostr(&prefix->Prefix, pfx_str, sizeof(pfx_str));
@@ -752,9 +752,8 @@ int check_conffile_perm(const char *username, const char *conf_file)
 	}
 
 	/* for non-root: must not be writable by self/own group */
-	if (strncmp(username, "root", 5) != 0
-	    && ((stbuf.st_mode & S_IWGRP && pw->pw_gid == stbuf.st_gid)
-		|| (stbuf.st_mode & S_IWUSR && pw->pw_uid == stbuf.st_uid))) {
+	if (strncmp(username, "root", 5) != 0 && ((stbuf.st_mode & S_IWGRP && pw->pw_gid == stbuf.st_gid)
+						  || (stbuf.st_mode & S_IWUSR && pw->pw_uid == stbuf.st_uid))) {
 		flog(LOG_ERR, "Insecure file permissions (writable by self/group): %s", conf_file);
 		return -1;
 	}

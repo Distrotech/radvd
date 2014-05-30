@@ -155,7 +155,7 @@ int update_device_index(struct Interface *iface)
 	return 0;
 }
 
-int disable_ipv6_autoconfig(char const * iface)
+int disable_ipv6_autoconfig(char const *iface)
 {
 	int value;
 	FILE *fp = NULL;
@@ -275,4 +275,3 @@ int check_ip6_forwarding(void)
 
 	return 0;
 }
-

@@ -215,7 +215,7 @@ int check_iface(struct Interface *iface)
 	return res;
 }
 
-struct Interface *find_iface_by_index(struct Interface * iface, int index)
+struct Interface *find_iface_by_index(struct Interface *iface, int index)
 {
 	for (; iface; iface = iface->next) {
 		if (iface->if_index == index) {
@@ -226,14 +226,14 @@ struct Interface *find_iface_by_index(struct Interface * iface, int index)
 	return 0;
 }
 
-struct Interface *find_iface_by_time(struct Interface * iface)
+struct Interface *find_iface_by_time(struct Interface *iface)
 {
 	if (!iface) {
 		return 0;
 	}
 
 	int timeout = next_time_msec(iface);
-	struct Interface * next = iface;
+	struct Interface *next = iface;
 
 	for (iface = iface->next; iface; iface = iface->next) {
 		int t = next_time_msec(iface);
@@ -255,7 +255,7 @@ void reschedule_iface(struct Interface *iface, double next)
 	iface->_next_multicast = next_timeval(next);
 }
 
-void for_each_iface(struct Interface * ifaces, void (*foo) (struct Interface *, void *), void *data)
+void for_each_iface(struct Interface *ifaces, void (*foo) (struct Interface *, void *), void *data)
 {
 	for (; ifaces; ifaces = ifaces->next) {
 		foo(ifaces, data);
@@ -310,7 +310,7 @@ void free_iface_list(struct Interface *iface)
 	}
 }
 
-void free_ifaces(struct Interface * ifaces)
+void free_ifaces(struct Interface *ifaces)
 {
 	dlog(LOG_DEBUG, 3, "Freeing Interfaces");
 

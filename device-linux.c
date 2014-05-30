@@ -159,7 +159,7 @@ int set_interface_var(const char *iface, const char *var, const char *name, uint
 	if (access(spath, F_OK) != 0)
 		return -1;
 
-	FILE * fp = fopen(spath, "w");
+	FILE *fp = fopen(spath, "w");
 	if (!fp) {
 		if (name)
 			flog(LOG_ERR, "failed to set %s (%u) for %s: %s", name, val, iface, strerror(errno));

@@ -32,7 +32,7 @@
 #define SOL_NETLINK	270
 #endif
 
-int process_netlink_msg(int sock, void * interfaces)
+int process_netlink_msg(int sock, void *interfaces)
 {
 	int rc = 0;
 
@@ -76,8 +76,8 @@ int process_netlink_msg(int sock, void * interfaces)
 				}
 			}
 
-			 /* Reinit the interfaces which needs it. */
-			struct Interface * iface = find_iface_by_index(interfaces, ifinfo->ifi_index);
+			/* Reinit the interfaces which needs it. */
+			struct Interface *iface = find_iface_by_index(interfaces, ifinfo->ifi_index);
 			if (iface) {
 				iface->racount = 0;
 				reschedule_iface(iface, 0);
@@ -104,7 +104,7 @@ int process_netlink_msg(int sock, void * interfaces)
 
 			++rc;
 
-			struct Interface * iface = find_iface_by_index(interfaces, ifaddr->ifa_index);
+			struct Interface *iface = find_iface_by_index(interfaces, ifaddr->ifa_index);
 			if (iface) {
 				iface->racount = 0;
 				reschedule_iface(iface, 0);
@@ -141,4 +141,3 @@ int netlink_socket(void)
 
 	return sock;
 }
-

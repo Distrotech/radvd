@@ -25,7 +25,7 @@ void process(int sock, struct Interface *interfaces, unsigned char *msg, int len
 	     struct in6_pktinfo *pkt_info, int hoplimit)
 {
 	char if_namebuf[IF_NAMESIZE] = { "" };
-	char * if_name = radvd_if_indextoname(pkt_info->ipi6_ifindex, if_namebuf);
+	char *if_name = radvd_if_indextoname(pkt_info->ipi6_ifindex, if_namebuf);
 	if (!if_name) {
 		if_name = "unknown";
 	}
@@ -118,7 +118,7 @@ static void process_rs(int sock, struct Interface *iface, unsigned char *msg, in
 	/* validation */
 	len -= sizeof(struct nd_router_solicit);
 
-	uint8_t * opt_str = (uint8_t *) (msg + sizeof(struct nd_router_solicit));
+	uint8_t *opt_str = (uint8_t *) (msg + sizeof(struct nd_router_solicit));
 
 	while (len > 0) {
 		if (len < 2) {
@@ -231,46 +231,48 @@ static void process_ra(struct Interface *iface, unsigned char *msg, int len, str
 
 		switch (*opt_str) {
 		case ND_OPT_MTU:{
-			struct nd_opt_mtu *mtu = (struct nd_opt_mtu *)opt_str;
-			if (len < sizeof(*mtu))
-				return;
+				struct nd_opt_mtu *mtu = (struct nd_opt_mtu *)opt_str;
+				if (len < sizeof(*mtu))
+					return;
 
-			if (iface->AdvLinkMTU && (ntohl(mtu->nd_opt_mtu_mtu) != iface->AdvLinkMTU)) {
-				flog(LOG_WARNING, "our AdvLinkMTU on %s doesn't agree with %s", iface->Name, addr_str);
-			}
-			break;
-		}
-		case ND_OPT_PREFIX_INFORMATION:{
-			struct nd_opt_prefix_info *pinfo = (struct nd_opt_prefix_info *)opt_str;
-			if (len < sizeof(*pinfo))
-				return;
-			int preferred = ntohl(pinfo->nd_opt_pi_preferred_time);
-			int valid = ntohl(pinfo->nd_opt_pi_valid_time);
-
-			struct AdvPrefix *prefix = iface->AdvPrefixList;
-			while (prefix) {
-				char prefix_str[INET6_ADDRSTRLEN];
-				if (prefix->enabled &&
-				    (prefix->PrefixLen == pinfo->nd_opt_pi_prefix_len)
-				    && addr_match(&prefix->Prefix, &pinfo->nd_opt_pi_prefix, prefix->PrefixLen)) {
-					addrtostr(&prefix->Prefix, prefix_str, sizeof(prefix_str));
-
-					if (!prefix->DecrementLifetimesFlag && valid != prefix->AdvValidLifetime) {
-						flog(LOG_WARNING,
-						     "our AdvValidLifetime on" " %s for %s doesn't agree with %s",
-						     iface->Name, prefix_str, addr_str);
-					}
-					if (!prefix->DecrementLifetimesFlag && preferred != prefix->AdvPreferredLifetime) {
-						flog(LOG_WARNING,
-						     "our AdvPreferredLifetime on" " %s for %s doesn't agree with %s",
-						     iface->Name, prefix_str, addr_str);
-					}
+				if (iface->AdvLinkMTU && (ntohl(mtu->nd_opt_mtu_mtu) != iface->AdvLinkMTU)) {
+					flog(LOG_WARNING, "our AdvLinkMTU on %s doesn't agree with %s", iface->Name,
+					     addr_str);
 				}
-
-				prefix = prefix->next;
+				break;
 			}
-			break;
-		}
+		case ND_OPT_PREFIX_INFORMATION:{
+				struct nd_opt_prefix_info *pinfo = (struct nd_opt_prefix_info *)opt_str;
+				if (len < sizeof(*pinfo))
+					return;
+				int preferred = ntohl(pinfo->nd_opt_pi_preferred_time);
+				int valid = ntohl(pinfo->nd_opt_pi_valid_time);
+
+				struct AdvPrefix *prefix = iface->AdvPrefixList;
+				while (prefix) {
+					char prefix_str[INET6_ADDRSTRLEN];
+					if (prefix->enabled && (prefix->PrefixLen == pinfo->nd_opt_pi_prefix_len)
+					    && addr_match(&prefix->Prefix, &pinfo->nd_opt_pi_prefix, prefix->PrefixLen)) {
+						addrtostr(&prefix->Prefix, prefix_str, sizeof(prefix_str));
+
+						if (!prefix->DecrementLifetimesFlag && valid != prefix->AdvValidLifetime) {
+							flog(LOG_WARNING,
+							     "our AdvValidLifetime on" " %s for %s doesn't agree with %s",
+							     iface->Name, prefix_str, addr_str);
+						}
+						if (!prefix->DecrementLifetimesFlag
+						    && preferred != prefix->AdvPreferredLifetime) {
+							flog(LOG_WARNING,
+							     "our AdvPreferredLifetime on"
+							     " %s for %s doesn't agree with %s", iface->Name, prefix_str,
+							     addr_str);
+						}
+					}
+
+					prefix = prefix->next;
+				}
+				break;
+			}
 		case ND_OPT_ROUTE_INFORMATION:
 			/* not checked: these will very likely vary a lot */
 			break;
@@ -287,98 +289,102 @@ static void process_ra(struct Interface *iface, unsigned char *msg, int len, str
 			/* not checked */
 			break;
 		case ND_OPT_RDNSS_INFORMATION:{
-			char rdnss_str[INET6_ADDRSTRLEN];
-			struct AdvRDNSS *rdnss = 0;
-			struct nd_opt_rdnss_info_local *rdnssinfo = (struct nd_opt_rdnss_info_local *)opt_str;
-			if (len < sizeof(*rdnssinfo))
-				return;
-			int count = rdnssinfo->nd_opt_rdnssi_len;
+				char rdnss_str[INET6_ADDRSTRLEN];
+				struct AdvRDNSS *rdnss = 0;
+				struct nd_opt_rdnss_info_local *rdnssinfo = (struct nd_opt_rdnss_info_local *)opt_str;
+				if (len < sizeof(*rdnssinfo))
+					return;
+				int count = rdnssinfo->nd_opt_rdnssi_len;
 
-			/* Check the RNDSS addresses received */
-			switch (count) {
-			case 7:
-				rdnss = iface->AdvRDNSSList;
-				if (!check_rdnss_presence(rdnss, &rdnssinfo->nd_opt_rdnssi_addr3)) {
-					/* no match found in iface->AdvRDNSSList */
-					addrtostr(&rdnssinfo->nd_opt_rdnssi_addr3, rdnss_str, sizeof(rdnss_str));
-					flog(LOG_WARNING, "RDNSS address %s received on %s from %s is not advertised by us",
-					     rdnss_str, iface->Name, addr_str);
-				}
-				/* FALLTHROUGH */
-			case 5:
-				rdnss = iface->AdvRDNSSList;
-				if (!check_rdnss_presence(rdnss, &rdnssinfo->nd_opt_rdnssi_addr2)) {
-					/* no match found in iface->AdvRDNSSList */
-					addrtostr(&rdnssinfo->nd_opt_rdnssi_addr2, rdnss_str, sizeof(rdnss_str));
-					flog(LOG_WARNING, "RDNSS address %s received on %s from %s is not advertised by us",
-					     rdnss_str, iface->Name, addr_str);
-				}
-				/* FALLTHROUGH */
-			case 3:
-				rdnss = iface->AdvRDNSSList;
-				if (!check_rdnss_presence(rdnss, &rdnssinfo->nd_opt_rdnssi_addr1)) {
-					/* no match found in iface->AdvRDNSSList */
-					addrtostr(&rdnssinfo->nd_opt_rdnssi_addr1, rdnss_str, sizeof(rdnss_str));
-					flog(LOG_WARNING, "RDNSS address %s received on %s from %s is not advertised by us",
-					     rdnss_str, iface->Name, addr_str);
+				/* Check the RNDSS addresses received */
+				switch (count) {
+				case 7:
+					rdnss = iface->AdvRDNSSList;
+					if (!check_rdnss_presence(rdnss, &rdnssinfo->nd_opt_rdnssi_addr3)) {
+						/* no match found in iface->AdvRDNSSList */
+						addrtostr(&rdnssinfo->nd_opt_rdnssi_addr3, rdnss_str, sizeof(rdnss_str));
+						flog(LOG_WARNING,
+						     "RDNSS address %s received on %s from %s is not advertised by us",
+						     rdnss_str, iface->Name, addr_str);
+					}
+					/* FALLTHROUGH */
+				case 5:
+					rdnss = iface->AdvRDNSSList;
+					if (!check_rdnss_presence(rdnss, &rdnssinfo->nd_opt_rdnssi_addr2)) {
+						/* no match found in iface->AdvRDNSSList */
+						addrtostr(&rdnssinfo->nd_opt_rdnssi_addr2, rdnss_str, sizeof(rdnss_str));
+						flog(LOG_WARNING,
+						     "RDNSS address %s received on %s from %s is not advertised by us",
+						     rdnss_str, iface->Name, addr_str);
+					}
+					/* FALLTHROUGH */
+				case 3:
+					rdnss = iface->AdvRDNSSList;
+					if (!check_rdnss_presence(rdnss, &rdnssinfo->nd_opt_rdnssi_addr1)) {
+						/* no match found in iface->AdvRDNSSList */
+						addrtostr(&rdnssinfo->nd_opt_rdnssi_addr1, rdnss_str, sizeof(rdnss_str));
+						flog(LOG_WARNING,
+						     "RDNSS address %s received on %s from %s is not advertised by us",
+						     rdnss_str, iface->Name, addr_str);
+					}
+
+					break;
+				default:
+					flog(LOG_ERR, "invalid len %i in RDNSS option on %s from %s", count, iface->Name,
+					     addr_str);
 				}
 
 				break;
-			default:
-				flog(LOG_ERR, "invalid len %i in RDNSS option on %s from %s", count, iface->Name, addr_str);
 			}
-
-			break;
-		}
 		case ND_OPT_DNSSL_INFORMATION:{
-			struct nd_opt_dnssl_info_local *dnsslinfo = (struct nd_opt_dnssl_info_local *)opt_str;
-			if (len < sizeof(*dnsslinfo))
-				return;
-
-			for (int offset = 0; offset < (dnsslinfo->nd_opt_dnssli_len - 1) * 8;) {
-				char suffix[256] = {""};
-				if (&dnsslinfo->nd_opt_dnssli_suffixes[offset] - opt_str >= len)
+				struct nd_opt_dnssl_info_local *dnsslinfo = (struct nd_opt_dnssl_info_local *)opt_str;
+				if (len < sizeof(*dnsslinfo))
 					return;
-				int label_len = dnsslinfo->nd_opt_dnssli_suffixes[offset++];
 
-				if (label_len == 0) {
-					/*
-					 * Ignore empty suffixes. They're
-					 * probably just padding...
-					 */
-					if (suffix[0] == '\0')
+				for (int offset = 0; offset < (dnsslinfo->nd_opt_dnssli_len - 1) * 8;) {
+					char suffix[256] = { "" };
+					if (&dnsslinfo->nd_opt_dnssli_suffixes[offset] - opt_str >= len)
+						return;
+					int label_len = dnsslinfo->nd_opt_dnssli_suffixes[offset++];
+
+					if (label_len == 0) {
+						/*
+						 * Ignore empty suffixes. They're
+						 * probably just padding...
+						 */
+						if (suffix[0] == '\0')
+							continue;
+
+						if (!check_dnssl_presence(iface->AdvDNSSLList, suffix)) {
+							flog(LOG_WARNING,
+							     "DNSSL suffix %s received on %s from %s is not advertised by us",
+							     suffix, iface->Name, addr_str);
+						}
+
+						suffix[0] = '\0';
 						continue;
-
-					if (!check_dnssl_presence(iface->AdvDNSSLList, suffix)) {
-						flog(LOG_WARNING,
-						     "DNSSL suffix %s received on %s from %s is not advertised by us",
-						     suffix, iface->Name, addr_str);
 					}
 
-					suffix[0] = '\0';
-					continue;
-				}
+					/*
+					 * 1) must not overflow int: label + 2, offset + label_len
+					 * 2) last byte of dnssli_suffix must not overflow opt_str + len
+					 */
+					if ((sizeof(suffix) - strlen(suffix)) < (label_len + 2) ||
+					    label_len > label_len + 2
+					    || &dnsslinfo->nd_opt_dnssli_suffixes[offset + label_len] - opt_str >= len
+					    || offset + label_len < offset) {
+						flog(LOG_ERR, "oversized suffix in DNSSL option on %s from %s", iface->Name,
+						     addr_str);
+						break;
+					}
 
-				/*
-				 * 1) must not overflow int: label + 2, offset + label_len
-				 * 2) last byte of dnssli_suffix must not overflow opt_str + len
-				 */
-				if ((sizeof(suffix) - strlen(suffix)) < (label_len + 2) ||
-				    label_len > label_len + 2
-				    || &dnsslinfo->nd_opt_dnssli_suffixes[offset + label_len] - opt_str >= len
-				    || offset + label_len < offset) {
-					flog(LOG_ERR, "oversized suffix in DNSSL option on %s from %s", iface->Name,
-					     addr_str);
-					break;
+					if (suffix[0] != '\0')
+						strcat(suffix, ".");
+					strncat(suffix, (char *)&dnsslinfo->nd_opt_dnssli_suffixes[offset], label_len);
+					offset += label_len;
 				}
-
-				if (suffix[0] != '\0')
-					strcat(suffix, ".");
-				strncat(suffix, (char *)&dnsslinfo->nd_opt_dnssli_suffixes[offset], label_len);
-				offset += label_len;
+				break;
 			}
-			break;
-		}
 		default:
 			dlog(LOG_DEBUG, 1, "unknown option %d in RA on %s from %s", (int)*opt_str, iface->Name, addr_str);
 			break;
