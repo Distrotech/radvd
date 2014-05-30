@@ -455,13 +455,7 @@ void main_loop(int sock, struct Interface *ifaces, char const *conf_path)
 			if (fds[1].revents & (POLLERR | POLLHUP | POLLNVAL)) {
 				flog(LOG_WARNING, "socket error on fds[1].fd");
 			} else if (fds[1].revents & POLLIN) {
-				if (process_netlink_msg(fds[1].fd, ifaces) > 0) {
-					/* TODO: This is still a bit coarse.  We used to reload the
-					 * whole config file here, which was overkill.  Now we're just
-					 * resetting up the ifaces.  Can we get it down to setting up
-					 * only the ifaces which have changed state? */
-					setup_ifaces(sock, ifaces);
-				}
+				process_netlink_msg(fds[1].fd, ifaces);
 			}
 #endif
 
