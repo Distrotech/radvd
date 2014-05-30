@@ -96,19 +96,13 @@ int process_netlink_msg(int sock, void * interfaces)
 
 			dlog(LOG_DEBUG, 3, "%s, ifindex %d, new address", ifname, ifaddr->ifa_index);
 
-			/* TODO: enable this (can lead to an infinite loop at the moment when we accept RAs on an interface
- 			 * we advertise on, as we get a RTM_NEWADDR event every time a router advertisement is received on
- 			 * an interface that accepts them, and process_netlink_msg currently triggers kickoff_adverts)
-			 */
-#if 0
 			++rc;
 
-			iface = find_iface_by_index(IfaceList, ifinfo->ifi_index);
+			struct Interface * iface = find_iface_by_index(interfaces, ifaddr->ifa_index);
 			if (iface) {
 				iface->racount = 0;
 				reschedule_iface(iface, 0);
 			}
-#endif
 		}
 	}
 
