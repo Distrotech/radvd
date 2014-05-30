@@ -983,8 +983,7 @@ number_or_infinity	: NUMBER
 
 %%
 
-static
-int countbits(int b)
+static int countbits(int b)
 {
 	int count;
 
@@ -995,8 +994,7 @@ int countbits(int b)
 	return (count);
 }
 
-static
-int count_mask(struct sockaddr_in6 *m)
+static int count_mask(struct sockaddr_in6 *m)
 {
 	struct in6_addr *in6 = &m->sin6_addr;
 	int i;
@@ -1008,8 +1006,7 @@ int count_mask(struct sockaddr_in6 *m)
 	return count;
 }
 
-static
-struct in6_addr get_prefix6(struct in6_addr const *addr, struct in6_addr const *mask)
+static struct in6_addr get_prefix6(struct in6_addr const *addr, struct in6_addr const *mask)
 {
 	struct in6_addr prefix = *addr;
 	int i = 0;
