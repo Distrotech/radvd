@@ -4,6 +4,7 @@
 			is using won't autoconfig itself using its own advert
 		improved netlink message processing to *only* reinit an
 			interface that changed.
+		2.0.0-alpha7
 
 2014/04/10	2.0.0-alpha6
 		format string checks
