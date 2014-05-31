@@ -644,10 +644,9 @@ static struct Interface *reload_config(int sock, struct Interface *ifaces, char 
 
 	flog(LOG_INFO, "attempting to reread config file");
 
-	ifaces = NULL;
-
 	/* reread config file */
-	if ((ifaces = readin_config(conf_path)) == 0) {
+	ifaces = readin_config(conf_path);
+	if (!ifaces) {
 		flog(LOG_ERR, "Exiting, failed to read config file.");
 		exit(1);
 	}

@@ -162,6 +162,7 @@ extern int yycolumn;
 extern int yylineno;
 static char const * filename;
 static struct Interface *iface;
+static struct Interface *IfaceList;
 static struct AdvPrefix *prefix;
 static struct AdvRoute *route;
 static struct AdvRDNSS *rdnss;
@@ -175,7 +176,54 @@ static void yyerror(char const * msg);
 
 %%
 
-grammar		: ifaceparams
+
+grammar		: grammar1
+		| grammar2
+		;
+
+grammar1	: grammar1 ifacedef
+		| ifacedef
+		;
+
+ifacedef	: ifacehead '{' ifaceparams  '}' ';'
+		{
+			dlog(LOG_DEBUG, 4, "interface definition for %s is ok", iface->Name);
+
+			iface->next = IfaceList;
+			IfaceList = iface;
+			iface = 0;
+		};
+
+ifacehead	: T_INTERFACE name
+		{
+			iface = IfaceList;
+
+			while (iface)
+			{
+				if (!strcmp($2, iface->Name))
+				{
+					flog(LOG_ERR, "duplicate interface "
+						"definition for %s", $2);
+					ABORT;
+				}
+				iface = iface->next;
+			}
+
+			iface = malloc(sizeof(struct Interface));
+
+			if (iface == NULL) {
+				flog(LOG_CRIT, "malloc failed: %s", strerror(errno));
+				ABORT;
+			}
+
+			iface_init_defaults(iface);
+			strncpy(iface->Name, $2, IFNAMSIZ-1);
+			iface->Name[IFNAMSIZ-1] = '\0';
+			iface->lineno = @1.first_line;
+		}
+		;
+
+grammar2	: ifaceparams
 		;
 
 name		: STRING
@@ -1042,88 +1090,26 @@ static void cleanup(void)
 		free(abro);
 }
 
-static struct Interface * readin_file(char * fname, FILE * in, char * iface_name)
+struct Interface * readin_config(char const *path)
 {
-	/* Global parser var iface. */
-	iface = malloc(sizeof(struct Interface));
+	IfaceList = 0;
+	iface = 0;
 
-	if (iface) {
-		iface_init_defaults(iface);
-
-		char * dot_conf = strrchr(iface_name, '.');
-		if (dot_conf && 0 == strcasecmp(dot_conf, ".conf")) {
-			*dot_conf = '\0';
-		}
-		strncpy(iface->Name, iface_name, sizeof(iface->Name));
-		iface->Name[sizeof(iface->Name) -1] = '\0';
-
+	FILE * in = fopen(path, "r");
+	if (in) {
 		yyset_in(in);
 		yycolumn = 1;
 		yylineno = 1;
 		if (yyparse() != 0) {
-			flog(LOG_ERR, "Error: (%s) parsing or activating the config file.", fname);
 			free(iface);
 			iface = 0;
+		} else {
+			dlog(LOG_DEBUG, 1, "config file, %s, syntax ok.", path);
 		}
-		else {
-			dlog(LOG_DEBUG, 1, "config file, %s, syntax ok.", fname);
-		}
+		fclose(in);
 	}
 
-	return iface;
-}
-
-static struct Interface * readin_dirent(struct dirent * dirent, char const * dname)
-{
-
-	char * fname = 0;
-	int rc = asprintf(&fname, "%s/%s", dname, dirent->d_name);
-	if (-1 != rc && fname) {
-		FILE * in = fopen(fname, "r");
-
-		if (!in) {
-			flog(LOG_ERR, "can't open %s: %s", fname, strerror(errno));
-		}
-		else {
-			/* Global parser var filename. */
-			filename = fname;
-			readin_file(fname, in, dirent->d_name);
-			fclose(in);
-		}
-		free(fname);
-	}
-
-	return iface;
-}
-
-static struct Interface * readin_dir(DIR * dir, char const * dname)
-{
-	struct Interface * retval = 0;
-	struct dirent *dirent = readdir(dir);
-	while (dirent) {
-		if (DT_LNK == dirent->d_type || DT_REG == dirent->d_type) {
-			struct Interface * retval_next = retval;
-			retval = readin_dirent(dirent, dname);
-			retval->next = retval_next;
-		}
-		dirent = readdir(dir);
-	}
-	return retval;
-}
-
-struct Interface * readin_config(char const *dname)
-{
-	struct Interface * retval = 0;
-	DIR * dir = opendir(dname);
-	if (dir) {
-		retval = readin_dir(dir, dname);
-		closedir(dir);
-	}
-	else {
-		dlog(LOG_DEBUG, 1, "Unable to open config path, %s: %s", dname, strerror(errno));
-	}
-
-	return retval;
+	return IfaceList;
 }
 
 static void yyerror(char const * msg)
