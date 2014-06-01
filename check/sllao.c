@@ -3,6 +3,8 @@
 #include <string.h>
 #include <stdio.h>
 
+local void add_sllao(unsigned char *buff, size_t * len, struct Interface *iface);
+
 int main(int argc, char * argv[])
 {
 	struct Interface iface;

@@ -16,12 +16,15 @@
 #include "includes.h"
 #include "radvd.h"
 
-static int log_method = L_NONE;
-static char const *log_ident;
-static char const *log_file;
-static FILE *log_file_fd;
-static int log_facility;
-static int debug_level = 0;
+__attribute__ ((format(printf, 2, 0)))
+local int vlog(int prio, char const *format, va_list ap);
+
+local int log_method = L_NONE;
+local char const *log_ident;
+local char const *log_file;
+local FILE *log_file_fd;
+local int log_facility;
+local int debug_level = 0;
 
 int log_open(int method, char const *ident, char const *log, int facility)
 {
@@ -63,7 +66,7 @@ int log_open(int method, char const *ident, char const *log, int facility)
 
 /* note: [dfv]log() is also called from root context */
 __attribute__ ((format(printf, 2, 0)))
-static int vlog(int prio, char const *format, va_list ap)
+local int vlog(int prio, char const *format, va_list ap)
 {
 	char tstamp[64], buff[1024];
 	struct tm *tm;

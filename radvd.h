@@ -22,6 +22,12 @@
 
 #define CONTACT_EMAIL	"Reuben Hawkins <reubenhwk@gmail.com>"
 
+#ifdef RADVD_TEST
+#define local
+#else
+#define local static
+#endif
+
 #define min(a,b)	(((a) < (b)) ? (a) : (b))
 
 struct AdvPrefix;
@@ -271,7 +277,6 @@ void reschedule_iface(struct Interface *iface, double next);
 int open_icmpv6_socket(void);
 
 /* send.c */
-int send_ra(int sock, struct Interface *iface, struct in6_addr const *dest);
 int send_ra_forall(int sock, struct Interface *iface, struct in6_addr *dest);
 
 /* syscalls.c */

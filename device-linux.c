@@ -22,7 +22,7 @@
 #define IPV6_ADDR_LINKLOCAL   0x0020U
 #endif
 
-static char const *hwstr(unsigned short sa_family);
+local char const *hwstr(unsigned short sa_family);
 
 /*
  * this function gets the hardware type and address of an interface,
@@ -165,7 +165,7 @@ int set_interface_retranstimer(const char *iface, uint32_t rettimer)
 	return privsep_interface_retranstimer(iface, rettimer);
 }
 
-static char const *hwstr(unsigned short sa_family)
+local char const *hwstr(unsigned short sa_family)
 {
 	char const *rc = 0;
 

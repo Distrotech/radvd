@@ -17,9 +17,16 @@
 #include "includes.h"
 #include "radvd.h"
 
-static int ensure_iface_setup(int sock, struct Interface *iface);
-static int really_send(int sock, struct in6_addr const *dest, unsigned int if_index, struct in6_addr if_addr, unsigned char *buff,
+local int ensure_iface_setup(int sock, struct Interface *iface);
+local int really_send(int sock, struct in6_addr const *dest, unsigned int if_index, struct in6_addr if_addr, unsigned char *buff,
 		size_t len);
+local void send_ra_inc_len(size_t * len, int add);
+local void add_sllao(unsigned char *buff, size_t * len, struct Interface *iface);
+local time_t time_diff_secs(const struct timeval *time_x, const struct timeval *time_y);
+local void decrement_lifetime(const time_t secs, uint32_t * lifetime);
+local void cease_adv_pfx_msg(const char *if_name, struct in6_addr *pfx, const int pfx_len);
+local int ensure_iface_setup(int sock, struct Interface *iface);
+local int send_ra(int sock, struct Interface *iface, struct in6_addr const *dest);
 
 /*
  * Sends an advertisement for all specified clients of this interface
@@ -74,7 +81,7 @@ int send_ra_forall(int sock, struct Interface *iface, struct in6_addr *dest)
 	return 0;
 }
 
-static void send_ra_inc_len(size_t * len, int add)
+local void send_ra_inc_len(size_t * len, int add)
 {
 	*len += add;
 	if (*len >= MSG_SIZE_SEND) {
@@ -83,7 +90,7 @@ static void send_ra_inc_len(size_t * len, int add)
 	}
 }
 
-static void add_sllao(unsigned char *buff, size_t * len, struct Interface *iface)
+local void add_sllao(unsigned char *buff, size_t * len, struct Interface *iface)
 {
 	/* *INDENT-OFF* */
 	/*
@@ -131,7 +138,7 @@ static void add_sllao(unsigned char *buff, size_t * len, struct Interface *iface
 	memcpy(sllao, iface->if_hwaddr, iface->if_hwaddr_len / 8);
 }
 
-static time_t time_diff_secs(const struct timeval *time_x, const struct timeval *time_y)
+local time_t time_diff_secs(const struct timeval *time_x, const struct timeval *time_y)
 {
 	time_t secs_diff;
 
@@ -143,7 +150,7 @@ static time_t time_diff_secs(const struct timeval *time_x, const struct timeval 
 
 }
 
-static void decrement_lifetime(const time_t secs, uint32_t * lifetime)
+local void decrement_lifetime(const time_t secs, uint32_t * lifetime)
 {
 
 	if (*lifetime > secs) {
@@ -153,7 +160,7 @@ static void decrement_lifetime(const time_t secs, uint32_t * lifetime)
 	}
 }
 
-static void cease_adv_pfx_msg(const char *if_name, struct in6_addr *pfx, const int pfx_len)
+local void cease_adv_pfx_msg(const char *if_name, struct in6_addr *pfx, const int pfx_len)
 {
 	char pfx_str[INET6_ADDRSTRLEN];
 
@@ -163,7 +170,7 @@ static void cease_adv_pfx_msg(const char *if_name, struct in6_addr *pfx, const i
 
 }
 
-static int ensure_iface_setup(int sock, struct Interface *iface)
+local int ensure_iface_setup(int sock, struct Interface *iface)
 {
 #ifndef HAVE_NETLINK
 	setup_iface(sock, iface);
@@ -172,7 +179,7 @@ static int ensure_iface_setup(int sock, struct Interface *iface)
 	return (iface->ready ? 0 : -1);
 }
 
-int send_ra(int sock, struct Interface *iface, struct in6_addr const *dest)
+local int send_ra(int sock, struct Interface *iface, struct in6_addr const *dest)
 {
 	size_t buff_dest = 0;
 
@@ -508,7 +515,7 @@ int send_ra(int sock, struct Interface *iface, struct in6_addr const *dest)
 	return 0;
 }
 
-static int really_send(int sock, struct in6_addr const *dest, unsigned int if_index, struct in6_addr if_addr, unsigned char *buff,
+local int really_send(int sock, struct in6_addr const *dest, unsigned int if_index, struct in6_addr if_addr, unsigned char *buff,
 		size_t len)
 {
 	struct sockaddr_in6 addr;

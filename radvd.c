@@ -31,7 +31,7 @@
 #ifdef HAVE_GETOPT_LONG
 
 /* *INDENT-OFF* */
-static char usage_str[] = {
+local char usage_str[] = {
 "\n"
 "  -c, --configtest        Parse the config file and exit.\n"
 "  -C, --config=PATH       Sets the config file.  Default is /etc/radvd.d.\n"
@@ -47,7 +47,7 @@ static char usage_str[] = {
 "  -v, --version           Print the version and quit.\n"
 };
 
-static struct option prog_opt[] = {
+local struct option prog_opt[] = {
 	{"debug", 1, 0, 'd'},
 	{"configtest", 0, 0, 'c'},
 	{"config", 1, 0, 'C'},
@@ -65,7 +65,7 @@ static struct option prog_opt[] = {
 
 #else
 
-static char usage_str[] = {
+local char usage_str[] = {
 "[-hsvcn] [-d level] [-C config_path] [-m log_method] [-l log_file]\n"
 "\t[-f facility] [-p pid_file] [-u username] [-t chrootdir]"
 
@@ -74,32 +74,32 @@ static char usage_str[] = {
 /* *INDENT-ON* */
 #endif
 
-static volatile int sighup_received = 0;
-static volatile int sigterm_received = 0;
-static volatile int sigint_received = 0;
-static volatile int sigusr1_received = 0;
+local volatile int sighup_received = 0;
+local volatile int sigterm_received = 0;
+local volatile int sigint_received = 0;
+local volatile int sigusr1_received = 0;
 
-static void sighup_handler(int sig);
-static void sigterm_handler(int sig);
-static void sigint_handler(int sig);
-static void sigusr1_handler(int sig);
-static void timer_handler(int sock, struct Interface *iface);
-static void config_interface(struct Interface *iface);
-static void kickoff_adverts(int sock, struct Interface *iface);
-static void stop_advert_foo(struct Interface *iface, void *data);
-static void stop_adverts(int sock, struct Interface *ifaces);
-static void version(void);
-static void usage(char const *pname);
-static int drop_root_privileges(const char *);
-static int check_conffile_perm(const char *, const char *);
-static int check_confpath_perm(const char *, const char *);
-static const char *radvd_get_pidfile(void);
-static void setup_iface_foo(struct Interface *iface, void *data);
-static void setup_ifaces(int sock, struct Interface *ifaces);
-static void main_loop(int sock, struct Interface *ifaces, char const *conf_path);
-static void reset_prefix_lifetimes_foo(struct Interface *iface, void *data);
-static void reset_prefix_lifetimes(struct Interface *ifaces);
-static struct Interface *reload_config(int sock, struct Interface *ifaces, char const *conf_path);
+local void sighup_handler(int sig);
+local void sigterm_handler(int sig);
+local void sigint_handler(int sig);
+local void sigusr1_handler(int sig);
+local void timer_handler(int sock, struct Interface *iface);
+local void config_interface(struct Interface *iface);
+local void kickoff_adverts(int sock, struct Interface *iface);
+local void stop_advert_foo(struct Interface *iface, void *data);
+local void stop_adverts(int sock, struct Interface *ifaces);
+local void version(void);
+local void usage(char const *pname);
+local int drop_root_privileges(const char *);
+local int check_conffile_perm(const char *, const char *);
+local int check_confpath_perm(const char *, const char *);
+local const char *radvd_get_pidfile(void);
+local void setup_iface_foo(struct Interface *iface, void *data);
+local void setup_ifaces(int sock, struct Interface *ifaces);
+local void main_loop(int sock, struct Interface *ifaces, char const *conf_path);
+local void reset_prefix_lifetimes_foo(struct Interface *iface, void *data);
+local void reset_prefix_lifetimes(struct Interface *ifaces);
+local struct Interface *reload_config(int sock, struct Interface *ifaces, char const *conf_path);
 
 int main(int argc, char *argv[])
 {
@@ -369,7 +369,7 @@ int main(int argc, char *argv[])
 }
 
 /* This function is copied from dpid.c (in libdaemon) and renamed. */
-static const char *radvd_get_pidfile(void)
+local const char *radvd_get_pidfile(void)
 {
 	static char *fn = NULL;
 	if (fn)
@@ -379,7 +379,7 @@ static const char *radvd_get_pidfile(void)
 	return fn;
 }
 
-static void main_loop(int sock, struct Interface *ifaces, char const *conf_path)
+local void main_loop(int sock, struct Interface *ifaces, char const *conf_path)
 {
 	struct pollfd fds[2];
 	sigset_t sigmask;
@@ -503,7 +503,7 @@ static void main_loop(int sock, struct Interface *ifaces, char const *conf_path)
 	}
 }
 
-static void timer_handler(int sock, struct Interface *iface)
+local void timer_handler(int sock, struct Interface *iface)
 {
 	dlog(LOG_DEBUG, 1, "timer_handler called for %s", iface->Name);
 
@@ -516,7 +516,7 @@ static void timer_handler(int sock, struct Interface *iface)
 	reschedule_iface(iface, next);
 }
 
-static void config_interface(struct Interface *iface)
+local void config_interface(struct Interface *iface)
 {
 	if (iface->AdvLinkMTU)
 		set_interface_linkmtu(iface->Name, iface->AdvLinkMTU);
@@ -528,7 +528,7 @@ static void config_interface(struct Interface *iface)
 		set_interface_retranstimer(iface->Name, iface->AdvRetransTimer);
 }
 
-static void kickoff_adverts(int sock, struct Interface *iface)
+local void kickoff_adverts(int sock, struct Interface *iface)
 {
 	/*
 	 *      send initial advertisement and set timers
@@ -550,7 +550,7 @@ static void kickoff_adverts(int sock, struct Interface *iface)
 	reschedule_iface(iface, next);
 }
 
-static void stop_advert_foo(struct Interface *iface, void *data)
+local void stop_advert_foo(struct Interface *iface, void *data)
 {
 	if (!iface->UnicastOnly) {
 		/* send a final advertisement with zero Router Lifetime */
@@ -561,7 +561,7 @@ static void stop_advert_foo(struct Interface *iface, void *data)
 	}
 }
 
-static void stop_adverts(int sock, struct Interface *ifaces)
+local void stop_adverts(int sock, struct Interface *ifaces)
 {
 	/*
 	 *      send final RA (a SHOULD in RFC4861 section 6.2.5)
@@ -616,7 +616,7 @@ int setup_iface(int sock, struct Interface *iface)
 	return 0;
 }
 
-static void setup_iface_foo(struct Interface *iface, void *data)
+local void setup_iface_foo(struct Interface *iface, void *data)
 {
 	int sock = *(int *)data;
 
@@ -634,12 +634,12 @@ static void setup_iface_foo(struct Interface *iface, void *data)
 	kickoff_adverts(sock, iface);
 }
 
-static void setup_ifaces(int sock, struct Interface *ifaces)
+local void setup_ifaces(int sock, struct Interface *ifaces)
 {
 	for_each_iface(ifaces, setup_iface_foo, &sock);
 }
 
-static struct Interface *reload_config(int sock, struct Interface *ifaces, char const *conf_path)
+local struct Interface *reload_config(int sock, struct Interface *ifaces, char const *conf_path)
 {
 	free_ifaces(ifaces);
 
@@ -658,12 +658,12 @@ static struct Interface *reload_config(int sock, struct Interface *ifaces, char 
 	return ifaces;
 }
 
-static void sighup_handler(int sig)
+local void sighup_handler(int sig)
 {
 	sighup_received = 1;
 }
 
-static void sigterm_handler(int sig)
+local void sigterm_handler(int sig)
 {
 	++sigterm_received;
 
@@ -672,7 +672,7 @@ static void sigterm_handler(int sig)
 	}
 }
 
-static void sigint_handler(int sig)
+local void sigint_handler(int sig)
 {
 	++sigint_received;
 
@@ -681,12 +681,12 @@ static void sigint_handler(int sig)
 	}
 }
 
-static void sigusr1_handler(int sig)
+local void sigusr1_handler(int sig)
 {
 	sigusr1_received = 1;
 }
 
-static void reset_prefix_lifetimes_foo(struct Interface *iface, void *data)
+local void reset_prefix_lifetimes_foo(struct Interface *iface, void *data)
 {
 	flog(LOG_INFO, "Resetting prefix lifetimes on %s", iface->Name);
 
@@ -704,12 +704,12 @@ static void reset_prefix_lifetimes_foo(struct Interface *iface, void *data)
 	}
 }
 
-static void reset_prefix_lifetimes(struct Interface *ifaces)
+local void reset_prefix_lifetimes(struct Interface *ifaces)
 {
 	for_each_iface(ifaces, reset_prefix_lifetimes_foo, 0);
 }
 
-static int drop_root_privileges(const char *username)
+local int drop_root_privileges(const char *username)
 {
 	struct passwd *pw = getpwnam(username);
 	if (pw) {
@@ -724,7 +724,7 @@ static int drop_root_privileges(const char *username)
 	return 0;
 }
 
-static int check_conffile_perm(const char *username, const char *conf_file)
+local int check_conffile_perm(const char *username, const char *conf_file)
 {
 	FILE *fp = fopen(conf_file, "r");
 	if (fp == NULL) {
@@ -761,7 +761,7 @@ static int check_conffile_perm(const char *username, const char *conf_file)
 	return 0;
 }
 
-static int check_confpath_perm(const char *username, const char *conf_path)
+local int check_confpath_perm(const char *username, const char *conf_path)
 {
 	int fails = 0;
 	DIR * dir = opendir(conf_path);
@@ -794,7 +794,7 @@ static int check_confpath_perm(const char *username, const char *conf_path)
 	return fails;
 }
 
-static void version(void)
+local void version(void)
 {
 	fprintf(stderr, "Version: %s\n\n", VERSION);
 	fprintf(stderr, "Compiled in settings:\n");
@@ -807,7 +807,7 @@ static void version(void)
 	exit(1);
 }
 
-static void usage(char const *pname)
+local void usage(char const *pname)
 {
 	fprintf(stderr, "usage: %s %s\n", pname, usage_str);
 	exit(1);

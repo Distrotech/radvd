@@ -5,11 +5,11 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
-static int socks[2];
+local int socks[2];
 
-static void write_something(int fd);
+local void write_something(int fd);
 
-static void write_something(int sock)
+local void write_something(int sock)
 {
 	struct icmp6_hdr icmph;
 	memset(&icmph, 0, sizeof(0));

@@ -26,9 +26,9 @@
 #include <dirent.h>
 #include <errno.h>
 #define YYERROR_VERBOSE 1
-static int countbits(int b);
-static int count_mask(struct sockaddr_in6 *m);
-static struct in6_addr get_prefix6(struct in6_addr const *addr, struct in6_addr const *mask);
+local int countbits(int b);
+local int count_mask(struct sockaddr_in6 *m);
+local struct in6_addr get_prefix6(struct in6_addr const *addr, struct in6_addr const *mask);
 
 #if 0 /* no longer necessary? */
 #ifndef HAVE_IN6_ADDR_S6_ADDR
@@ -160,18 +160,18 @@ static struct in6_addr get_prefix6(struct in6_addr const *addr, struct in6_addr 
 #include "scanner.h"
 extern int yycolumn;
 extern int yylineno;
-static char const * filename;
-static struct Interface *iface;
-static struct Interface *IfaceList;
-static struct AdvPrefix *prefix;
-static struct AdvRoute *route;
-static struct AdvRDNSS *rdnss;
-static struct AdvDNSSL *dnssl;
-static struct AdvLowpanCo *lowpanco;
-static struct AdvAbro  *abro;
-static void cleanup(void);
+local char const * filename;
+local struct Interface *iface;
+local struct Interface *IfaceList;
+local struct AdvPrefix *prefix;
+local struct AdvRoute *route;
+local struct AdvRDNSS *rdnss;
+local struct AdvDNSSL *dnssl;
+local struct AdvLowpanCo *lowpanco;
+local struct AdvAbro  *abro;
+local void cleanup(void);
 #define ABORT	do { cleanup(); YYABORT; } while (0);
-static void yyerror(char const * msg);
+local void yyerror(char const * msg);
 %}
 
 %%
@@ -1029,7 +1029,7 @@ number_or_infinity	: NUMBER
 
 %%
 
-static int countbits(int b)
+local int countbits(int b)
 {
 	int count;
 
@@ -1040,7 +1040,7 @@ static int countbits(int b)
 	return (count);
 }
 
-static int count_mask(struct sockaddr_in6 *m)
+local int count_mask(struct sockaddr_in6 *m)
 {
 	struct in6_addr *in6 = &m->sin6_addr;
 	int i;
@@ -1052,7 +1052,7 @@ static int count_mask(struct sockaddr_in6 *m)
 	return count;
 }
 
-static struct in6_addr get_prefix6(struct in6_addr const *addr, struct in6_addr const *mask)
+local struct in6_addr get_prefix6(struct in6_addr const *addr, struct in6_addr const *mask)
 {
 	struct in6_addr prefix = *addr;
 	int i = 0;
@@ -1064,7 +1064,7 @@ static struct in6_addr get_prefix6(struct in6_addr const *addr, struct in6_addr 
 	return prefix;
 }
 
-static void cleanup(void)
+local void cleanup(void)
 {
 	if (iface)
 		free(iface);
@@ -1115,7 +1115,7 @@ struct Interface * readin_config(char const *path)
 	return IfaceList;
 }
 
-static void yyerror(char const * msg)
+local void yyerror(char const * msg)
 {
 	fprintf(stderr, "%s:%d:%d: error: %s\n",
 		filename,

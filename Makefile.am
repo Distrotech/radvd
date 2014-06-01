@@ -54,6 +54,7 @@ radvd_CPPFLAGS = \
 	@DAEMON_CFLAGS@
 
 radvd_test_CPPFLAGS = \
+	-D RADVD_TEST=1 \
 	@DAEMON_CFLAGS@
 
 noinst_LIBRARIES = libradvd-parser.a

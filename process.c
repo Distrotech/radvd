@@ -17,9 +17,9 @@
 #include "includes.h"
 #include "radvd.h"
 
-static void process_rs(int sock, struct Interface *, unsigned char *msg, int len, struct sockaddr_in6 *);
-static void process_ra(struct Interface *, unsigned char *msg, int len, struct sockaddr_in6 *);
-static int addr_match(struct in6_addr *a1, struct in6_addr *a2, int prefixlen);
+local void process_rs(int sock, struct Interface *, unsigned char *msg, int len, struct sockaddr_in6 *);
+local void process_ra(struct Interface *, unsigned char *msg, int len, struct sockaddr_in6 *);
+local int addr_match(struct in6_addr *a1, struct in6_addr *a2, int prefixlen);
 
 void process(int sock, struct Interface *interfaces, unsigned char *msg, int len, struct sockaddr_in6 *addr,
 	     struct in6_pktinfo *pkt_info, int hoplimit)
@@ -113,7 +113,7 @@ void process(int sock, struct Interface *interfaces, unsigned char *msg, int len
 	}
 }
 
-static void process_rs(int sock, struct Interface *iface, unsigned char *msg, int len, struct sockaddr_in6 *addr)
+local void process_rs(int sock, struct Interface *iface, unsigned char *msg, int len, struct sockaddr_in6 *addr)
 {
 	/* validation */
 	len -= sizeof(struct nd_router_solicit);
@@ -173,7 +173,7 @@ static void process_rs(int sock, struct Interface *iface, unsigned char *msg, in
 /*
  * check router advertisements according to RFC 4861, 6.2.7
  */
-static void process_ra(struct Interface *iface, unsigned char *msg, int len, struct sockaddr_in6 *addr)
+local void process_ra(struct Interface *iface, unsigned char *msg, int len, struct sockaddr_in6 *addr)
 {
 	char addr_str[INET6_ADDRSTRLEN];
 	addrtostr(&addr->sin6_addr, addr_str, sizeof(addr_str));
@@ -396,7 +396,7 @@ static void process_ra(struct Interface *iface, unsigned char *msg, int len, str
 	dlog(LOG_DEBUG, 2, "processed RA on %s", iface->Name);
 }
 
-static int addr_match(struct in6_addr *a1, struct in6_addr *a2, int prefixlen)
+local int addr_match(struct in6_addr *a1, struct in6_addr *a2, int prefixlen)
 {
 	unsigned int pdw = prefixlen >> 0x05;	/* num of whole uint32_t in prefix */
 	if (pdw) {

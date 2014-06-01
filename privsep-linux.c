@@ -19,11 +19,11 @@
 #include "radvd.h"
 #include "pathnames.h"
 
-static int set_interface_var(const char *iface, const char *var, const char *name, uint32_t val);
-static void privsep_read_loop(void);
+local int set_interface_var(const char *iface, const char *var, const char *name, uint32_t val);
+local void privsep_read_loop(void);
 
 /* For reading or writing, depending on process */
-static int pfd = -1;
+local int pfd = -1;
 
 /* Command types */
 enum privsep_type {
@@ -41,7 +41,7 @@ struct privsep_command {
 };
 
 /* Privileged read loop */
-static void privsep_read_loop(void)
+local void privsep_read_loop(void)
 {
 	while (1) {
 		struct privsep_command cmd;
@@ -216,7 +216,7 @@ int privsep_interface_retranstimer(const char *iface, uint32_t rettimer)
 }
 
 /* note: also called from the root context */
-static int set_interface_var(const char *iface, const char *var, const char *name, uint32_t val)
+local int set_interface_var(const char *iface, const char *var, const char *name, uint32_t val)
 {
 	int retval = -1;
 	FILE * fp = 0;
