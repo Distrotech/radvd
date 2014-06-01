@@ -16,9 +16,6 @@
 #include "includes.h"
 #include "radvd.h"
 #include "defaults.h"
-#include "pathnames.h"		/* for PATH_PROC_NET_IF_INET6 */
-
-static uint8_t ll_prefix[] = { 0xfe, 0x80 };
 
 /*
  * this function gets the hardware type and address of an interface,
@@ -27,35 +24,27 @@ static uint8_t ll_prefix[] = { 0xfe, 0x80 };
  */
 int update_device_info(struct Interface *iface)
 {
-	struct ifaddrs *addresses = 0, *ifa;
-
 	struct ifreq ifr;
-	struct AdvPrefix *prefix;
-	char zero[sizeof(iface->if_addr)];
-
-	if (if_nametoindex(iface->Name) == 0) {
-		flog(LOG_ERR, "%s not found: %s", iface->Name, strerror(errno));
-		goto ret;
-	}
 
 	memset(&ifr, 0, sizeof(ifr));
 	strncpy(ifr.ifr_name, iface->Name, IFNAMSIZ - 1);
 	ifr.ifr_name[IFNAMSIZ - 1] = '\0';
 
-	if (ioctl(sock, SIOCGIFMTU, &ifr) < 0) {
-		flog(LOG_ERR, "ioctl(SIOCGIFMTU) failed for %s: %s", iface->Name, strerror(errno));
+	if (radvd_ioctl(sock, SIOCGIFMTU, &ifr) < 0) {
+		flog(LOG_ERR, "radvd_ioctl(SIOCGIFMTU) failed for %s: %s", iface->Name, strerror(errno));
 		goto ret;
 	}
 
 	dlog(LOG_DEBUG, 3, "mtu for %s is %d", iface->Name, ifr.ifr_mtu);
 	iface->if_maxmtu = ifr.ifr_mtu;
 
+	struct ifaddrs *addresses = 0;
 	if (getifaddrs(&addresses) != 0) {
 		flog(LOG_ERR, "getifaddrs failed: %s(%d)", strerror(errno), errno);
 		goto ret;
 	}
 
-	for (ifa = addresses; ifa != NULL; ifa = ifa->ifa_next) {
+	for (struct ifaddrs * ifa = addresses; ifa != NULL; ifa = ifa->ifa_next) {
 		if (strcmp(ifa->ifa_name, iface->Name) != 0)
 			continue;
 
@@ -94,12 +83,13 @@ int update_device_info(struct Interface *iface)
 		dlog(LOG_DEBUG, 3, "prefix length for %s is %d", iface->Name, iface->if_prefix_len);
 
 		if (iface->if_prefix_len != -1) {
+			char zero[sizeof(iface->if_addr)];
 			memset(zero, 0, dl->sdl_alen);
 			if (!memcmp(iface->if_hwaddr, zero, dl->sdl_alen))
 				flog(LOG_WARNING, "WARNING, MAC address on %s is all zero!", iface->Name);
 		}
 
-		prefix = iface->AdvPrefixList;
+		struct AdvPrefix *prefix = iface->AdvPrefixList;
 		while (prefix) {
 			if ((iface->if_prefix_len != -1) && (iface->if_prefix_len != prefix->PrefixLen)) {
 				flog(LOG_WARNING, "prefix length should be %d for %s", iface->if_prefix_len, iface->Name);
@@ -116,67 +106,16 @@ int update_device_info(struct Interface *iface)
 	iface->if_maxmtu = -1;
 	iface->if_hwaddr_len = -1;
 	iface->if_prefix_len = -1;
+
 	if (addresses != 0)
 		freeifaddrs(addresses);
-	return -1;
-}
 
-/*
- * Saves the first link local address seen on the specified interface to iface->if_addr
- *
- */
-int setup_linklocal_addr(struct Interface *iface)
-{
-	struct ifaddrs *addresses = 0, *ifa;
-
-	if (getifaddrs(&addresses) != 0) {
-		flog(LOG_ERR, "getifaddrs failed: %s(%d)", strerror(errno), errno);
-		goto ret;
-	}
-
-	for (ifa = addresses; ifa != NULL; ifa = ifa->ifa_next) {
-		if (strcmp(ifa->ifa_name, iface->Name) != 0)
-			continue;
-
-		if (ifa->ifa_addr == NULL)
-			continue;
-
-		if (ifa->ifa_addr->sa_family == AF_LINK) {
-			struct sockaddr_dl *dl = (struct sockaddr_dl *)ifa->ifa_addr;
-			if (memcmp(iface->Name, dl->sdl_data, dl->sdl_nlen) == 0)
-				iface->if_index = dl->sdl_index;
-			continue;
-		}
-
-		if (ifa->ifa_addr->sa_family != AF_INET6)
-			continue;
-
-		struct sockaddr_in6 *a6 = (struct sockaddr_in6 *)ifa->ifa_addr;
-
-		/* Skip if it is not a linklocal address */
-		if (memcmp(&(a6->sin6_addr), ll_prefix, sizeof(ll_prefix)) != 0)
-			continue;
-
-		memcpy(&iface->if_addr, &(a6->sin6_addr), sizeof(struct in6_addr));
-		freeifaddrs(addresses);
-		return 0;
-	}
-
- ret:
-	if (addresses)
-		freeifaddrs(addresses);
-	flog(LOG_ERR, "no linklocal address configured for %s", iface->Name);
 	return -1;
 }
 
 int setup_allrouters_membership(struct Interface *iface)
 {
-	return (0);
-}
-
-int check_allrouters_membership(struct Interface *iface)
-{
-	return (0);
+	return 0;
 }
 
 int set_interface_linkmtu(const char *iface, uint32_t mtu)

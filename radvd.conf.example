@@ -5,17 +5,17 @@
 # NOTE  syntax of radvd.conf, and is not meant to be used for a    NOTE
 # NOTE  real radvd configuration.                                  NOTE
 # NOTE                                                             NOTE
+# NOTE  This file would normally be renamed to eth0.conf           NOTE
+# NOTE                                                             NOTE
 # NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE 
 #
 
-interface eth0
-{
-	AdvSendAdvert on;
+AdvSendAdvert on;
 
 # This may be needed on some interfaces which are not active when
 # radvd starts, but become available later on; see man page for details.
 
-	# IgnoreIfMissing on;
+# IgnoreIfMissing on;
 
 #
 # These settings cause advertisements to be sent every 3-10 seconds.  This
@@ -23,30 +23,30 @@ interface eth0
 # increased when not using 6to4 prefixes.
 #
 
-	MinRtrAdvInterval 3;
-	MaxRtrAdvInterval 10;
+MinRtrAdvInterval 3;
+MaxRtrAdvInterval 10;
 
 #
 # You can use AdvDefaultPreference setting to advertise the preference of
 # the router for the purposes of default router determination.
 # NOTE: This feature is still being specified and is not widely supported!
 #
-	AdvDefaultPreference low;
+AdvDefaultPreference low;
 
 #
 # Disable Mobile IPv6 support
 #
-	AdvHomeAgentFlag off;
+AdvHomeAgentFlag off;
 
 #
 # example of a standard prefix
 #
-	prefix 2001:db8:1:0::/64
-	{
-		AdvOnLink on;
-		AdvAutonomous on;
-		AdvRouterAddr off;
-	};
+prefix 2001:db8:1:0::/64
+{
+	AdvOnLink on;
+	AdvAutonomous on;
+	AdvRouterAddr off;
+};
 
 #
 # example of a 6to4 prefix
@@ -56,11 +56,11 @@ interface eth0
 # reconfigured. Be sure that the SLA ID (1234 in this case) is specified
 # here!
 #
-	prefix 0:0:0:1234::/64
-	{
-		AdvOnLink on;
-		AdvAutonomous on;
-		AdvRouterAddr off;
+prefix 0:0:0:1234::/64
+{
+	AdvOnLink on;
+	AdvAutonomous on;
+	AdvRouterAddr off;
 
 #
 # This setting causes radvd to replace the first 48 bits of the prefix
@@ -79,7 +79,7 @@ interface eth0
 # accordingly.
 #
 
-		Base6to4Interface ppp0;
+	Base6to4Interface ppp0;
 
 #
 # If the IP address of ppp0 is assigned dynamically, be sure to set the
@@ -87,38 +87,35 @@ interface eth0
 # may continue to use a prefix that no longer corresponds to the address
 # on ppp0!
 #
-		AdvPreferredLifetime 120;
-		AdvValidLifetime 300;
-	};
+	AdvPreferredLifetime 120;
+	AdvValidLifetime 300;
+};
 #
 # example of a more specific route
 # NOTE: This feature is not very widely supported! You may also need to
 # enable it manually (e.g. on Linux, change the value of
 # sysctl accept_ra_rt_info_max_plen to 48 or 64)
 #
-	route 2001:db0:fff::/48
-	{
-		AdvRoutePreference high;
-		AdvRouteLifetime 3600;
-	};
+route 2001:db0:fff::/48
+{
+	AdvRoutePreference high;
+	AdvRouteLifetime 3600;
+};
 
 #
 # RDNSS
 # NOTE: This feature is not very widely implemented.
 #
-        RDNSS 2001:db8::1 2001:db8::2
-        {
-                AdvRDNSSLifetime 30;
-        };
+RDNSS 2001:db8::1 2001:db8::2
+{
+	AdvRDNSSLifetime 30;
+};
 
 #
 # DNS Search Lists
 #
-        DNSSL branch.example.com example.com
-        {
-                AdvDNSSLLifetime 30;
-        };
-
-
+DNSSL branch.example.com example.com
+{
+	AdvDNSSLLifetime 30;
 };
 

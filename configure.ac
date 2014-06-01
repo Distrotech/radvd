@@ -12,12 +12,14 @@ dnl   may request it from <reubenhwk@gmail.com>.
 dnl
 dnl
 
-AC_INIT(radvd.c)
-
+dnl If adding rcX to version, be sure to separate with a '-' 
+AC_INIT(radvd, [2.0.0-alpha7])
+AC_CONFIG_SRCDIR(radvd.c)
 AC_CANONICAL_SYSTEM
-VERSION=`cat ${srcdir}/VERSION | grep -v '^#' | tr -d '\012'`
-AM_INIT_AUTOMAKE(radvd,$VERSION,true)
+AM_INIT_AUTOMAKE
+
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES(yes)])
+
 
 AC_MSG_CHECKING([architecture])
 case "$target" in
@@ -45,7 +47,8 @@ you must specifiy it with --target on the configure command line])
 esac
 
 dnl Determine CC and preset CFLAGS
-AC_PROG_CC
+AC_PROG_CC_C99
+AC_PROG_RANLIB
 
 dnl Determine of netlink is available
 AC_MSG_CHECKING(netlink)
@@ -112,9 +115,9 @@ AC_MSG_RESULT($PATH_RADVD_PID)
 dnl Check where to put the configfile
 AC_MSG_CHECKING(where to find configfile)
 AC_ARG_WITH(configfile,
-[  --with-configfile       Path to the radvd config file [SYSCONF/radvd.conf]],
+[  --with-configfile       Path to the radvd config file [SYSCONF]],
 	PATH_RADVD_CONF=$withval,
-	[eval PATH_RADVD_CONF=${sysconfdir}/radvd.conf])
+	[eval PATH_RADVD_CONF=${sysconfdir}])
 PATH_RADVD_CONF=$(echo $PATH_RADVD_CONF | sed 's/NONE//1')
 AC_MSG_RESULT($PATH_RADVD_CONF)
 
@@ -195,6 +198,7 @@ cat << EOF
 
 Your build configuration:
 
+	CPPFLAGS = $CPPFLAGS
 	CFLAGS = $CFLAGS
 	LDFLAGS = $LDFLAGS
 	Arch = ${arch}

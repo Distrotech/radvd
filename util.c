@@ -16,21 +16,39 @@
 #include "includes.h"
 #include "radvd.h"
 
+
+__attribute__ ((format(printf, 1, 2)))
+char * strdupf(char const * format, ...)
+{
+	va_list va;
+	va_start(va, format);
+	char * strp = 0;
+	int rc = vasprintf(&strp, format, va);
+	if (rc == -1 || !strp) {
+		flog(LOG_ERR, "vasprintf failed: %s", strerror(errno));
+		exit(-1);
+	}
+	va_end(va);
+
+	return strp;
+}
+
 double rand_between(double lower, double upper)
 {
 	return ((upper - lower) / (RAND_MAX + 1.0) * rand() + lower);
 }
 
-void print_addr(struct in6_addr *addr, char *str)
+/* This assumes that str is not null and str_size > 0 */
+void addrtostr(struct in6_addr *addr, char *str, size_t str_size)
 {
 	const char *res;
 
-	/* XXX: overflows 'str' if it isn't big enough */
-	res = inet_ntop(AF_INET6, (void *)addr, str, INET6_ADDRSTRLEN);
+	res = inet_ntop(AF_INET6, (void *)addr, str, str_size);
 
 	if (res == NULL) {
-		flog(LOG_ERR, "print_addr: inet_ntop: %s", strerror(errno));
-		strcpy(str, "[invalid address]");
+		flog(LOG_ERR, "addrtostr: inet_ntop: %s", strerror(errno));
+		strncpy(str, "[invalid address]", str_size);
+		str[str_size - 1] = '\0';
 	}
 }
 

@@ -17,6 +17,10 @@
 #include "includes.h"
 #include "radvd.h"
 
+static int ensure_iface_setup(int sock, struct Interface *iface);
+static int really_send(int sock, struct in6_addr const *dest, unsigned int if_index, struct in6_addr if_addr, unsigned char *buff,
+		size_t len);
+
 /*
  * Sends an advertisement for all specified clients of this interface
  * (or via broadcast, if there are no restrictions configured).
@@ -25,16 +29,19 @@
  * address only, but only if it was configured.
  *
  */
-int send_ra_forall(struct Interface *iface, struct in6_addr *dest)
+int send_ra_forall(int sock, struct Interface *iface, struct in6_addr *dest)
 {
 	struct Clients *current;
+
+	if (iface->racount < MAX_INITIAL_RTR_ADVERTISEMENTS)
+		iface->racount++;
 
 	/* If no list of clients was specified for this interface, we broadcast */
 	if (iface->ClientList == NULL) {
 		if (dest == NULL && iface->UnicastOnly) {
 			return 0;
 		}
-		return send_ra(iface, dest);
+		return send_ra(sock, iface, dest);
 	}
 
 	/* If clients are configured, send the advertisement to all of them via unicast */
@@ -48,7 +55,7 @@ int send_ra_forall(struct Interface *iface, struct in6_addr *dest)
 		if (dest != NULL && memcmp(dest, &current->Address, sizeof(struct in6_addr)) != 0)
 			continue;
 		dlog(LOG_DEBUG, 5, "Sending RA to %s", address_text);
-		send_ra(iface, &(current->Address));
+		send_ra(sock, iface, &(current->Address));
 
 		/* If we should only send the RA to a specific address, we are done */
 		if (dest != NULL)
@@ -58,12 +65,12 @@ int send_ra_forall(struct Interface *iface, struct in6_addr *dest)
 		return 0;
 
 	/* If we refused a client's solicitation, log it if debugging is high enough */
-	char address_text[INET6_ADDRSTRLEN];
-	memset(address_text, 0, sizeof(address_text));
-	if (get_debuglevel() >= 5)
+	if (get_debuglevel() >= 5) {
+		char address_text[INET6_ADDRSTRLEN];
+		memset(address_text, 0, sizeof(address_text));
 		inet_ntop(AF_INET6, dest, address_text, INET6_ADDRSTRLEN);
-
-	dlog(LOG_DEBUG, 5, "Not answering request from %s, not configured", address_text);
+		dlog(LOG_DEBUG, 5, "Not answering request from %s, not configured", address_text);
+	}
 	return 0;
 }
 
@@ -74,6 +81,54 @@ static void send_ra_inc_len(size_t * len, int add)
 		flog(LOG_ERR, "Too many prefixes, routes, rdnss or dnssl to fit in buffer.  Exiting.");
 		exit(1);
 	}
+}
+
+static void add_sllao(unsigned char *buff, size_t * len, struct Interface *iface)
+{
+	/* *INDENT-OFF* */
+	/*
+	4.6.1.  Source/Target Link-layer Address
+
+	      0                   1                   2                   3
+	      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+	     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	     |     Type      |    Length     |    Link-Layer Address ...
+	     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+	   Fields:
+
+	      Type
+			     1 for Source Link-layer Address
+			     2 for Target Link-layer Address
+
+	      Length         The length of the option (including the type and
+			     length fields) in units of 8 octets.  For example,
+			     the length for IEEE 802 addresses is 1 [IPv6-
+			     ETHER].
+
+	      Link-Layer Address
+			     The variable length link-layer address.
+
+			     The content and format of this field (including
+			     byte and bit ordering) is expected to be specified
+			     in specific documents that describe how IPv6
+			     operates over different link layers.  For instance,
+			     [IPv6-ETHER].
+
+	 */
+	/* *INDENT-ON* */
+	/* +2 for the ND_OPT_SOURCE_LINKADDR and the length (each occupy one byte) */
+	size_t const sllao_bytes = (iface->if_hwaddr_len / 8) + 2;
+	size_t const sllao_len = (sllao_bytes + 7) / 8;
+	uint8_t *sllao = (uint8_t *) (buff + *len);
+
+	send_ra_inc_len(len, sllao_len * 8);
+
+	*sllao++ = ND_OPT_SOURCE_LINKADDR;
+	*sllao++ = (uint8_t) sllao_len;
+
+	/* if_hwaddr_len is in bits, so divide by 8 to get the byte count. */
+	memcpy(sllao, iface->if_hwaddr, iface->if_hwaddr_len / 8);
 }
 
 static time_t time_diff_secs(const struct timeval *time_x, const struct timeval *time_y)
@@ -102,85 +157,58 @@ static void cease_adv_pfx_msg(const char *if_name, struct in6_addr *pfx, const i
 {
 	char pfx_str[INET6_ADDRSTRLEN];
 
-	print_addr(pfx, pfx_str);
+	addrtostr(pfx, pfx_str, sizeof(pfx_str));
 
 	dlog(LOG_DEBUG, 3, "Will cease advertising %s/%u%%%s, preferred lifetime is 0", pfx_str, pfx_len, if_name);
 
 }
 
-int send_ra(struct Interface *iface, struct in6_addr *dest)
+static int ensure_iface_setup(int sock, struct Interface *iface)
 {
-	uint8_t all_hosts_addr[] = { 0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 };
-	struct nd_router_advert *radvert;
-	struct AdvPrefix *prefix;
-	struct AdvRoute *route;
-	struct AdvRDNSS *rdnss;
-	struct AdvDNSSL *dnssl;
-	struct AdvLowpanCo *lowpanco;
-	struct AdvAbro *abroo;
-	struct timeval time_now;
-	time_t secs_since_last_ra;
-	char addr_str[INET6_ADDRSTRLEN];
+#ifndef HAVE_NETLINK
+	setup_iface(sock, iface);
+#endif
 
-	unsigned char buff[MSG_SIZE_SEND];
+	return (iface->ready ? 0 : -1);
+}
+
+int send_ra(int sock, struct Interface *iface, struct in6_addr const *dest)
+{
 	size_t buff_dest = 0;
-	size_t len = 0;
-	ssize_t err;
 
-	update_device_info(iface);
-
-	/* First we need to check that the interface hasn't been removed or deactivated */
-	if (check_device(iface) < 0) {
-		if (iface->IgnoreIfMissing)	/* a bit more quiet warning message.. */
-			dlog(LOG_DEBUG, 4, "interface %s does not exist, ignoring the interface", iface->Name);
-		else {
-			flog(LOG_WARNING, "interface %s does not exist, ignoring the interface", iface->Name);
-		}
-		iface->HasFailed = 1;
-		/* not really a 'success', but we need to schedule new timers.. */
+	/* when netlink is not available (disabled or BSD), ensure_iface_setup is necessary. */
+	if (ensure_iface_setup(sock, iface) < 0) {
+		dlog(LOG_DEBUG, 3, "Not sending RA for %s, interface is not ready", iface->Name);
 		return 0;
-	} else {
-		/* check_device was successful, act if it has failed previously */
-		if (iface->HasFailed == 1) {
-			flog(LOG_WARNING, "interface %s seems to have come back up, trying to reinitialize", iface->Name);
-			iface->HasFailed = 0;
-			/*
-			 * return -1 so timer_handler() doesn't schedule new timers,
-			 * reload_config() will kick off new timers anyway.  This avoids
-			 * timer list corruption.
-			 */
-			reload_config();
-			return -1;
-		}
 	}
 
-	/* Make sure that we've joined the all-routers multicast group */
-	if (!disableigmp6check && check_allrouters_membership(iface) < 0)
-		flog(LOG_WARNING, "problem checking all-routers membership on %s", iface->Name);
-
 	if (!iface->AdvSendAdvert) {
-		dlog(LOG_DEBUG, 2, "AdvSendAdvert is off for %s", iface->Name);
+		dlog(LOG_DEBUG, 3, "AdvSendAdvert is off for %s", iface->Name);
 		return 0;
 	}
 
 	dlog(LOG_DEBUG, 3, "sending RA on %s", iface->Name);
 
 	if (dest == NULL) {
-		dest = (struct in6_addr *)all_hosts_addr;
+		static uint8_t const all_hosts_addr[] = { 0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 };
+		dest = (struct in6_addr const *)all_hosts_addr;
 		gettimeofday(&iface->last_multicast, NULL);
 	}
 
+	struct timeval time_now;
 	gettimeofday(&time_now, NULL);
-	secs_since_last_ra = time_diff_secs(&time_now, &iface->last_ra_time);
+	time_t secs_since_last_ra = time_diff_secs(&time_now, &iface->last_ra_time);
 	if (secs_since_last_ra < 0) {
 		secs_since_last_ra = 0;
 		flog(LOG_WARNING, "gettimeofday() went backwards!");
 	}
 	iface->last_ra_time = time_now;
 
+	unsigned char buff[MSG_SIZE_SEND];
 	memset(buff, 0, sizeof(buff));
-	radvert = (struct nd_router_advert *)buff;
+	struct nd_router_advert *radvert = (struct nd_router_advert *)buff;
 
+	size_t len = 0;
 	send_ra_inc_len(&len, sizeof(struct nd_router_advert));
 
 	radvert->nd_ra_type = ND_ROUTER_ADVERT;
@@ -204,17 +232,13 @@ int send_ra(struct Interface *iface, struct in6_addr *dest)
 	radvert->nd_ra_reachable = htonl(iface->AdvReachableTime);
 	radvert->nd_ra_retransmit = htonl(iface->AdvRetransTimer);
 
-	prefix = iface->AdvPrefixList;
-
 	/*
 	 *      add prefix options
 	 */
-
+	struct AdvPrefix *prefix = iface->AdvPrefixList;
 	while (prefix) {
 		if (prefix->enabled && (!prefix->DecrementLifetimesFlag || prefix->curr_preferredlft > 0)) {
-			struct nd_opt_prefix_info *pinfo;
-
-			pinfo = (struct nd_opt_prefix_info *)(buff + len);
+			struct nd_opt_prefix_info *pinfo = (struct nd_opt_prefix_info *)(buff + len);
 
 			send_ra_inc_len(&len, sizeof(*pinfo));
 
@@ -246,24 +270,23 @@ int send_ra(struct Interface *iface, struct in6_addr *dest)
 			pinfo->nd_opt_pi_reserved2 = 0;
 
 			memcpy(&pinfo->nd_opt_pi_prefix, &prefix->Prefix, sizeof(struct in6_addr));
-			print_addr(&prefix->Prefix, addr_str);
-			dlog(LOG_DEBUG, 5, "adding prefix %s to advert for %s with %u seconds(s) valid lifetime and %u seconds(s) preferred time",
-				addr_str, iface->Name, ntohl(pinfo->nd_opt_pi_valid_time), ntohl(pinfo->nd_opt_pi_preferred_time));
+			char addr_str[INET6_ADDRSTRLEN];
+			addrtostr(&prefix->Prefix, addr_str, sizeof(addr_str));
+			dlog(LOG_DEBUG, 5,
+			     "adding prefix %s to advert for %s with %u seconds(s) valid lifetime and %u seconds(s) preferred time",
+			     addr_str, iface->Name, ntohl(pinfo->nd_opt_pi_valid_time),
+			     ntohl(pinfo->nd_opt_pi_preferred_time));
 		}
 
 		prefix = prefix->next;
 	}
 
-	route = iface->AdvRouteList;
-
 	/*
 	 *      add route options
 	 */
-
+	struct AdvRoute *route = iface->AdvRouteList;
 	while (route) {
-		struct nd_opt_route_info_local *rinfo;
-
-		rinfo = (struct nd_opt_route_info_local *)(buff + len);
+		struct nd_opt_route_info_local *rinfo = (struct nd_opt_route_info_local *)(buff + len);
 
 		send_ra_inc_len(&len, sizeof(*rinfo));
 
@@ -284,16 +307,12 @@ int send_ra(struct Interface *iface, struct in6_addr *dest)
 		route = route->next;
 	}
 
-	rdnss = iface->AdvRDNSSList;
-
 	/*
 	 *      add rdnss options
 	 */
-
+	struct AdvRDNSS *rdnss = iface->AdvRDNSSList;
 	while (rdnss) {
-		struct nd_opt_rdnss_info_local *rdnssinfo;
-
-		rdnssinfo = (struct nd_opt_rdnss_info_local *)(buff + len);
+		struct nd_opt_rdnss_info_local *rdnssinfo = (struct nd_opt_rdnss_info_local *)(buff + len);
 
 		send_ra_inc_len(&len, sizeof(*rdnssinfo) - (3 - rdnss->AdvRDNSSNumber) * sizeof(struct in6_addr));
 
@@ -314,21 +333,18 @@ int send_ra(struct Interface *iface, struct in6_addr *dest)
 		rdnss = rdnss->next;
 	}
 
-	dnssl = iface->AdvDNSSLList;
-
 	/*
 	 *      add dnssl options
 	 */
-
+	struct AdvDNSSL *dnssl = iface->AdvDNSSLList;
 	while (dnssl) {
-		struct nd_opt_dnssl_info_local *dnsslinfo;
 		int const start_len = len;
-		int i;
 
-		dnsslinfo = (struct nd_opt_dnssl_info_local *)(buff + len);
+		struct nd_opt_dnssl_info_local *dnsslinfo = (struct nd_opt_dnssl_info_local *)(buff + len);
 
 		send_ra_inc_len(&len, sizeof(dnsslinfo->nd_opt_dnssli_type) +
-				sizeof(dnsslinfo->nd_opt_dnssli_len) + sizeof(dnsslinfo->nd_opt_dnssli_reserved) + sizeof(dnsslinfo->nd_opt_dnssli_lifetime)
+				sizeof(dnsslinfo->nd_opt_dnssli_len) + sizeof(dnsslinfo->nd_opt_dnssli_reserved) +
+				sizeof(dnsslinfo->nd_opt_dnssli_lifetime)
 		    );
 
 		dnsslinfo->nd_opt_dnssli_type = ND_OPT_DNSSL_INFORMATION;
@@ -340,13 +356,12 @@ int send_ra(struct Interface *iface, struct in6_addr *dest)
 			dnsslinfo->nd_opt_dnssli_lifetime = htonl(dnssl->AdvDNSSLLifetime);
 		}
 
-		for (i = 0; i < dnssl->AdvDNSSLNumber; i++) {
-			char *label;
-			int label_len;
+		for (int i = 0; i < dnssl->AdvDNSSLNumber; i++) {
 
-			label = dnssl->AdvDNSSLSuffixes[i];
+			char *label = dnssl->AdvDNSSLSuffixes[i];
 
 			while (label[0] != '\0') {
+				int label_len;
 				if (strchr(label, '.') == NULL)
 					label_len = strlen(label);
 				else
@@ -385,11 +400,8 @@ int send_ra(struct Interface *iface, struct in6_addr *dest)
 	/*
 	 *      add MTU option
 	 */
-
 	if (iface->AdvLinkMTU != 0) {
-		struct nd_opt_mtu *mtu;
-
-		mtu = (struct nd_opt_mtu *)(buff + len);
+		struct nd_opt_mtu *mtu = (struct nd_opt_mtu *)(buff + len);
 
 		send_ra_inc_len(&len, sizeof(*mtu));
 
@@ -402,59 +414,15 @@ int send_ra(struct Interface *iface, struct in6_addr *dest)
 	/*
 	 * add Source Link-layer Address option
 	 */
-
 	if (iface->AdvSourceLLAddress && iface->if_hwaddr_len > 0) {
-		/*
-		4.6.1.  Source/Target Link-layer Address
-
-		      0                   1                   2                   3
-		      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-		     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-		     |     Type      |    Length     |    Link-Layer Address ...
-		     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-		   Fields:
-
-		      Type
-				     1 for Source Link-layer Address
-				     2 for Target Link-layer Address
-
-		      Length         The length of the option (including the type and
-				     length fields) in units of 8 octets.  For example,
-				     the length for IEEE 802 addresses is 1 [IPv6-
-				     ETHER].
-
-		      Link-Layer Address
-				     The variable length link-layer address.
-
-				     The content and format of this field (including
-				     byte and bit ordering) is expected to be specified
-				     in specific documents that describe how IPv6
-				     operates over different link layers.  For instance,
-				     [IPv6-ETHER].
-
-		*/
-		/* +2 for the ND_OPT_SOURCE_LINKADDR and the length (each occupy one byte) */
-		size_t const sllao_bytes = (iface->if_hwaddr_len / 8) + 2;
-		size_t const sllao_len = (sllao_bytes + 7) / 8;
-		uint8_t *sllao = (uint8_t *) (buff + len);
-
-		send_ra_inc_len(&len, sllao_len * 8);
-
-		*sllao++ = ND_OPT_SOURCE_LINKADDR;
-		*sllao++ = (uint8_t) sllao_len;
-
-		/* if_hwaddr_len is in bits, so divide by 8 to get the byte count. */
-		memcpy(sllao, iface->if_hwaddr, iface->if_hwaddr_len / 8);
+		add_sllao(buff, &len, iface);
 	}
 
 	/*
 	 * Mobile IPv6 ext: Advertisement Interval Option to support
 	 * movement detection of mobile nodes
 	 */
-
 	if (iface->AdvIntervalOpt) {
-		struct AdvInterval a_ival;
 		uint32_t ival;
 		if (iface->MaxRtrAdvInterval < Cautious_MaxRtrAdvInterval) {
 			ival = ((iface->MaxRtrAdvInterval + Cautious_MaxRtrAdvInterval_Leeway) * 1000);
@@ -462,6 +430,7 @@ int send_ra(struct Interface *iface, struct in6_addr *dest)
 		} else {
 			ival = (iface->MaxRtrAdvInterval * 1000);
 		}
+		struct AdvInterval a_ival;
 		a_ival.type = ND_OPT_RTR_ADV_INTERVAL;
 		a_ival.length = 1;
 		a_ival.reserved = 0;
@@ -476,8 +445,9 @@ int send_ra(struct Interface *iface, struct in6_addr *dest)
 	 * Mobile IPv6 ext: Home Agent Information Option to support
 	 * Dynamic Home Agent Address Discovery
 	 */
-
-	if (iface->AdvHomeAgentInfo && (iface->AdvMobRtrSupportFlag || iface->HomeAgentPreference != 0 || iface->HomeAgentLifetime != iface->AdvDefaultLifetime)) {
+	if (iface->AdvHomeAgentInfo
+	    && (iface->AdvMobRtrSupportFlag || iface->HomeAgentPreference != 0
+		|| iface->HomeAgentLifetime != iface->AdvDefaultLifetime)) {
 		struct HomeAgentInfo ha_info;
 		ha_info.type = ND_OPT_HOME_AGENT_INFO;
 		ha_info.length = 1;
@@ -490,15 +460,12 @@ int send_ra(struct Interface *iface, struct in6_addr *dest)
 		memcpy(buff + buff_dest, &ha_info, sizeof(ha_info));
 	}
 
-	lowpanco = iface->AdvLowpanCoList;
-
 	/*
 	 * Add 6co option
 	 */
-
+	struct AdvLowpanCo *lowpanco = iface->AdvLowpanCoList;
 	if (lowpanco) {
-		struct nd_opt_6co *co;
-		co = (struct nd_opt_6co *)(buff + len);
+		struct nd_opt_6co *co = (struct nd_opt_6co *)(buff + len);
 
 		send_ra_inc_len(&len, sizeof(*co));
 
@@ -511,15 +478,12 @@ int send_ra(struct Interface *iface, struct in6_addr *dest)
 		co->nd_opt_6co_con_prefix = lowpanco->AdvContextPrefix;
 	}
 
-	abroo = iface->AdvAbroList;
-
 	/*
 	 * Add ABRO option
 	 */
-
+	struct AdvAbro *abroo = iface->AdvAbroList;
 	if (abroo) {
-		struct nd_opt_abro *abro;
-		abro = (struct nd_opt_abro *)(buff + len);
+		struct nd_opt_abro *abro = (struct nd_opt_abro *)(buff + len);
 
 		send_ra_inc_len(&len, sizeof(*abro));
 
@@ -531,44 +495,41 @@ int send_ra(struct Interface *iface, struct in6_addr *dest)
 		abro->nd_opt_abro_6lbr_address = abroo->LBRaddress;
 	}
 
-	err = really_send(dest, iface->if_index, iface->if_addr, buff, len);
+	int err = really_send(sock, dest, iface->if_index, iface->if_addr, buff, len);
 
 	if (err < 0) {
 		if (!iface->IgnoreIfMissing || !(errno == EINVAL || errno == ENODEV))
 			flog(LOG_WARNING, "sendmsg: %s", strerror(errno));
 		else
 			dlog(LOG_DEBUG, 3, "sendmsg: %s", strerror(errno));
+		return -1;
 	}
 
 	return 0;
 }
 
-int really_send(struct in6_addr const *dest, unsigned int if_index, struct in6_addr if_addr, unsigned char *buff, size_t len)
+static int really_send(int sock, struct in6_addr const *dest, unsigned int if_index, struct in6_addr if_addr, unsigned char *buff,
+		size_t len)
 {
-	char __attribute__ ((aligned(8))) chdr[CMSG_SPACE(sizeof(struct in6_pktinfo))];
-	struct in6_pktinfo *pkt_info;
-	struct msghdr mhdr;
-	struct cmsghdr *cmsg;
-	struct iovec iov;
-	int err;
 	struct sockaddr_in6 addr;
-
 	memset((void *)&addr, 0, sizeof(addr));
 	addr.sin6_family = AF_INET6;
 	addr.sin6_port = htons(IPPROTO_ICMPV6);
 	memcpy(&addr.sin6_addr, dest, sizeof(struct in6_addr));
 
+	struct iovec iov;
 	iov.iov_len = len;
 	iov.iov_base = (caddr_t) buff;
 
+	char __attribute__ ((aligned(8))) chdr[CMSG_SPACE(sizeof(struct in6_pktinfo))];
 	memset(chdr, 0, sizeof(chdr));
-	cmsg = (struct cmsghdr *)chdr;
+	struct cmsghdr *cmsg = (struct cmsghdr *)chdr;
 
 	cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_pktinfo));
 	cmsg->cmsg_level = IPPROTO_IPV6;
 	cmsg->cmsg_type = IPV6_PKTINFO;
 
-	pkt_info = (struct in6_pktinfo *)CMSG_DATA(cmsg);
+	struct in6_pktinfo *pkt_info = (struct in6_pktinfo *)CMSG_DATA(cmsg);
 	pkt_info->ipi6_ifindex = if_index;
 	memcpy(&pkt_info->ipi6_addr, &if_addr, sizeof(struct in6_addr));
 
@@ -577,6 +538,7 @@ int really_send(struct in6_addr const *dest, unsigned int if_index, struct in6_a
 		addr.sin6_scope_id = if_index;
 #endif
 
+	struct msghdr mhdr;
 	memset(&mhdr, 0, sizeof(mhdr));
 	mhdr.msg_name = (caddr_t) & addr;
 	mhdr.msg_namelen = sizeof(struct sockaddr_in6);
@@ -585,7 +547,7 @@ int really_send(struct in6_addr const *dest, unsigned int if_index, struct in6_a
 	mhdr.msg_control = (void *)cmsg;
 	mhdr.msg_controllen = sizeof(chdr);
 
-	err = sendmsg(sock, &mhdr, 0);
+	int err = radvd_sendmsg(sock, &mhdr, 0);
 
 	return err;
 }

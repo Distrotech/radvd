@@ -25,29 +25,29 @@
 #include <poll.h>
 #include <libdaemon/dfork.h>
 #include <libdaemon/dpid.h>
-
-struct Interface *IfaceList = NULL;
+#include <sys/types.h>
+#include <dirent.h>
 
 #ifdef HAVE_GETOPT_LONG
 
-char usage_str[] = {
-	"\n" "  -c, --configtest       Parse the config file and exit.\n"
-	    "  -C, --config=PATH      Sets the config file.  Default is /etc/radvd.conf.\n"
-	    "  -d, --debug=NUM        Sets the debug level.  Values can be 1, 2, 3, 4 or 5.\n"
-	    "  -f, --facility=NUM     Sets the logging facility.\n"
-	    "  -h, --help             Show this help screen.\n"
-	    "  -l, --logfile=PATH     Sets the log file.\n"
-	    "  -m, --logmethod=X      Sets the log method to one of: syslog, stderr, stderr_syslog, logfile, or none.\n"
-	    "  -p, --pidfile=PATH     Sets the pid file.\n"
-	    "  -t, --chrootdir=PATH   Chroot to the specified path.\n"
-	    "  -u, --username=USER    Switch to the specified user.\n" "  -n, --nodaemon         Prevent the daemonizing.\n"
-#ifdef HAVE_NETLINK
-	    "  -L, --disablenetlink     Disable netlink feature\n"
-#endif
-	"  -I, --disableigmp6check    Disable igmp6 check before send\n" "  -v, --version          Print the version and quit.\n"
+/* *INDENT-OFF* */
+static char usage_str[] = {
+"\n"
+"  -c, --configtest        Parse the config file and exit.\n"
+"  -C, --config=PATH       Sets the config file.  Default is /etc/radvd.d.\n"
+"  -d, --debug=NUM         Sets the debug level.  Values can be 1, 2, 3, 4 or 5.\n"
+"  -f, --facility=NUM      Sets the logging facility.\n"
+"  -h, --help              Show this help screen.\n"
+"  -l, --logfile=PATH      Sets the log file.\n"
+"  -m, --logmethod=X       Sets the log method to one of: syslog, stderr, stderr_syslog, logfile, or none.\n"
+"  -p, --pidfile=PATH      Sets the pid file.\n"
+"  -t, --chrootdir=PATH    Chroot to the specified path.\n"
+"  -u, --username=USER     Switch to the specified user.\n"
+"  -n, --nodaemon          Prevent the daemonizing.\n"
+"  -v, --version           Print the version and quit.\n"
 };
 
-struct option prog_opt[] = {
+static struct option prog_opt[] = {
 	{"debug", 1, 0, 'd'},
 	{"configtest", 0, 0, 'c'},
 	{"config", 1, 0, 'C'},
@@ -60,74 +60,68 @@ struct option prog_opt[] = {
 	{"version", 0, 0, 'v'},
 	{"help", 0, 0, 'h'},
 	{"nodaemon", 0, 0, 'n'},
-#ifdef HAVE_NETLINK
-	{"disablenetlink", 0, 0, 'L'},
-#endif
-	{"disableigmp6check", 0, 0, 'I'},
 	{NULL, 0, 0, 0}
 };
 
 #else
 
-char usage_str[] = "[-hsvcn] [-d level] [-C config_file] [-m log_method] [-l log_file]\n" "\t[-f facility] [-p pid_file] [-u username] [-t chrootdir]";
+static char usage_str[] = {
+"[-hsvcn] [-d level] [-C config_path] [-m log_method] [-l log_file]\n"
+"\t[-f facility] [-p pid_file] [-u username] [-t chrootdir]"
 
+};
+
+/* *INDENT-ON* */
 #endif
 
-extern FILE *yyin;
+static volatile int sighup_received = 0;
+static volatile int sigterm_received = 0;
+static volatile int sigint_received = 0;
+static volatile int sigusr1_received = 0;
 
-char *conf_file = NULL;
-char *pidfile = NULL;
-char *pname;
-int sock = -1;
-#ifdef HAVE_NETLINK
-int disablenetlink = 0;
-#endif
-int disableigmp6check = 0;
-
-volatile int sighup_received = 0;
-volatile int sigterm_received = 0;
-volatile int sigint_received = 0;
-volatile int sigusr1_received = 0;
-
-void sighup_handler(int sig);
-void sigterm_handler(int sig);
-void sigint_handler(int sig);
-void sigusr1_handler(int sig);
-void timer_handler(void *data);
-void config_interface(void);
-void kickoff_adverts(void);
-void stop_adverts(void);
-void version(void);
-void usage(void);
-int drop_root_privileges(const char *);
-int readin_config(char *);
-int check_conffile_perm(const char *, const char *);
-const char *get_pidfile(void);
-void main_loop(void);
+static void sighup_handler(int sig);
+static void sigterm_handler(int sig);
+static void sigint_handler(int sig);
+static void sigusr1_handler(int sig);
+static void timer_handler(int sock, struct Interface *iface);
+static void config_interface(struct Interface *iface);
+static void kickoff_adverts(int sock, struct Interface *iface);
+static void stop_advert_foo(struct Interface *iface, void *data);
+static void stop_adverts(int sock, struct Interface *ifaces);
+static void version(void);
+static void usage(char const *pname);
+static int drop_root_privileges(const char *);
+static int check_conffile_perm(const char *, const char *);
+static int check_confpath_perm(const char *, const char *);
+static const char *radvd_get_pidfile(void);
+static void setup_iface_foo(struct Interface *iface, void *data);
+static void setup_ifaces(int sock, struct Interface *ifaces);
+static void main_loop(int sock, struct Interface *ifaces, char const *conf_path);
+static void reset_prefix_lifetimes_foo(struct Interface *iface, void *data);
+static void reset_prefix_lifetimes(struct Interface *ifaces);
+static struct Interface *reload_config(int sock, struct Interface *ifaces, char const *conf_path);
 
 int main(int argc, char *argv[])
 {
-	int c, log_method;
-	char *logfile;
-	int facility;
+	int c;
+	int log_method = L_STDERR_SYSLOG;
+	char *logfile = PATH_RADVD_LOG;
+	int facility = LOG_FACILITY;
 	char *username = NULL;
 	char *chrootdir = NULL;
 	int configtest = 0;
 	int daemonize = 1;
+	int force_pid_file = 0;
 #ifdef HAVE_GETOPT_LONG
 	int opt_idx;
 #endif
-	pid_t pid;
 
-	pname = ((pname = strrchr(argv[0], '/')) != NULL) ? pname + 1 : argv[0];
+	char const *pname = ((pname = strrchr(argv[0], '/')) != NULL) ? pname + 1 : argv[0];
 
 	srand((unsigned int)time(NULL));
 
-	log_method = L_STDERR_SYSLOG;
-	logfile = PATH_RADVD_LOG;
-	conf_file = PATH_RADVD_CONF;
-	facility = LOG_FACILITY;
-	pidfile = PATH_RADVD_PID;
+	char const *conf_path = PATH_RADVD_CONF;
+	daemon_pid_file_ident = PATH_RADVD_PID;	/* libdaemon defines daemon_pid_file_ident */
 
 	/* parse args */
 #define OPTIONS_STR "d:C:l:m:p:t:u:vhcn"
@@ -139,7 +133,7 @@ int main(int argc, char *argv[])
 	{
 		switch (c) {
 		case 'C':
-			conf_file = optarg;
+			conf_path = optarg;
 			break;
 		case 'd':
 			set_debuglevel(atoi(optarg));
@@ -151,7 +145,8 @@ int main(int argc, char *argv[])
 			logfile = optarg;
 			break;
 		case 'p':
-			pidfile = optarg;
+			daemon_pid_file_ident = optarg;
+			force_pid_file = 1;
 			break;
 		case 'm':
 			if (!strcmp(optarg, "syslog")) {
@@ -184,16 +179,8 @@ int main(int argc, char *argv[])
 		case 'n':
 			daemonize = 0;
 			break;
-#ifdef HAVE_NETLINK
-		case 'L':
-			disablenetlink = 1;
-			break;
-#endif
-		case 'I':
-			disableigmp6check = 1;
-			break;
 		case 'h':
-			usage();
+			usage(pname);
 #ifdef HAVE_GETOPT_LONG
 		case ':':
 			fprintf(stderr, "%s: option %s: parameter expected\n", pname, prog_opt[opt_idx].name);
@@ -223,6 +210,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (configtest) {
+		set_debuglevel(1);
 		log_method = L_STDERR;
 	}
 
@@ -233,24 +221,45 @@ int main(int argc, char *argv[])
 
 	if (!configtest) {
 		flog(LOG_INFO, "version %s started", VERSION);
-	}
 
-	/* get a raw socket for sending and receiving ICMPv6 messages */
-	sock = open_icmpv6_socket();
-	if (sock < 0) {
-		perror("open_icmpv6_socket");
-		exit(1);
+		/* Calling privsep here, before opening the socket and reading the config
+		 * file, ensures we're not going to be wasting resources in the privsep
+		 * process. */
+		dlog(LOG_DEBUG, 3, "Initializing privsep");
+		if (privsep_init() < 0) {
+			flog(LOG_INFO, "Failed to initialize privsep.");
+			exit(1);
+		}
 	}
 
 	/* check that 'other' cannot write the file
 	 * for non-root, also that self/own group can't either
 	 */
-	if (check_conffile_perm(username, conf_file) < 0) {
+	if (check_confpath_perm(username, conf_path) != 0) {
 		if (get_debuglevel() == 0) {
-			flog(LOG_ERR, "Exiting, permissions on conf_file invalid.\n");
+			flog(LOG_ERR, "Exiting, permissions on conf_file invalid.");
 			exit(1);
 		} else
 			flog(LOG_WARNING, "Insecure file permissions, but continuing anyway");
+	}
+
+	/* parse config file */
+	struct Interface *ifaces = NULL;
+	if ((ifaces = readin_config(conf_path)) == 0) {
+		flog(LOG_ERR, "Exiting, failed to read config file.");
+		exit(1);
+	}
+
+	if (configtest) {
+		free_ifaces(ifaces);
+		exit(0);
+	}
+
+	/* get a raw socket for sending and receiving ICMPv6 messages */
+	int sock = open_icmpv6_socket();
+	if (sock < 0) {
+		perror("open_icmpv6_socket");
+		exit(1);
 	}
 
 	/* if we know how to do it, check whether forwarding is enabled */
@@ -258,48 +267,24 @@ int main(int argc, char *argv[])
 		flog(LOG_WARNING, "IPv6 forwarding seems to be disabled, but continuing anyway.");
 	}
 
-	/* parse config file */
-	if (readin_config(conf_file) < 0) {
-		flog(LOG_ERR, "Exiting, failed to read config file.\n");
-		exit(1);
-	}
-
-	if (configtest) {
-		fprintf(stderr, "Syntax OK\n");
-		exit(0);
-	}
-#ifdef USE_PRIVSEP
-	dlog(LOG_DEBUG, 3, "Initializing privsep");
-	if (privsep_init() < 0) {
-		perror("Failed to initialize privsep.");
-		exit(1);
-	}
-#endif
-
-	/* drop root privileges if requested. */
-	if (username) {
-		if (drop_root_privileges(username) < 0) {
-			perror("drop_root_privileges");
-			exit(1);
-		}
-	}
+	daemon_pid_file_proc = radvd_get_pidfile;
 
 	/*
 	 * okay, config file is read in, socket and stuff is setup, so
 	 * lets fork now...
 	 */
-
-	if (get_debuglevel() > 0) {
-		daemonize = 0;
-	}
-
+	dlog(LOG_DEBUG, 3, "radvd startup PID is %d", getpid());
 	if (daemonize) {
+		pid_t pid;
+
 		if (daemon_retval_init()) {
 			flog(LOG_ERR, "Could not initialize daemon IPC.");
 			exit(1);
 		}
 
+		/* TODO: research daemon_log (in libdaemon) and have it log the same as radvd. */
 		pid = daemon_fork();
+
 		if (-1 == pid) {
 			flog(LOG_ERR, "Could not fork: %s", strerror(errno));
 			daemon_retval_done();
@@ -307,102 +292,168 @@ int main(int argc, char *argv[])
 		}
 
 		if (0 < pid) {
-			if (daemon_retval_wait(0)) {
-				flog(LOG_ERR, "Could not daemonize.");
+			switch (daemon_retval_wait(1)) {
+			case 0:
+				dlog(LOG_DEBUG, 3, "radvd PID is %d", pid);
+				exit(0);
+				break;
+
+			case 1:
+				flog(LOG_ERR, "radvd already running, terminating.");
 				exit(1);
+				break;
+
+			case 2:
+				flog(LOG_ERR, "Cannot create radvd PID file, terminating: %s", strerror(errno));
+				exit(2);
+				break;
+
+			default:
+				flog(LOG_ERR, "Could not daemonize.");
+				exit(-1);
+				break;
 			}
-			exit(0);
 		}
 
-		daemon_pid_file_proc = get_pidfile;
 		if (daemon_pid_file_is_running() >= 0) {
-			flog(LOG_ERR, "radvd already running, terminating.");
 			daemon_retval_send(1);
 			exit(1);
 		}
+
 		if (daemon_pid_file_create()) {
-			flog(LOG_ERR, "Cannot create radvd PID file, terminating: %s", strerror(errno));
 			daemon_retval_send(2);
+			exit(2);
+		}
+
+		daemon_retval_send(0);
+	} else {
+		if (force_pid_file) {
+			if (daemon_pid_file_is_running() >= 0) {
+				flog(LOG_ERR, "radvd already running, terminating.");
+				exit(1);
+			}
+
+			if (daemon_pid_file_create()) {
+				flog(LOG_ERR, "Cannot create radvd PID file, terminating: %s", strerror(errno));
+				exit(2);
+			}
+		}
+
+		dlog(LOG_DEBUG, 3, "radvd PID is %d", getpid());
+	}
+
+	if (username) {
+		if (drop_root_privileges(username) < 0) {
+			perror("drop_root_privileges");
+			flog(LOG_ERR, "unable to drop root privileges");
 			exit(1);
 		}
-		daemon_retval_send(0);
 	}
 
-	/*
-	 *      config signal handlers
-	 */
-	signal(SIGHUP, sighup_handler);
-	signal(SIGTERM, sigterm_handler);
-	signal(SIGINT, sigint_handler);
-	signal(SIGUSR1, sigusr1_handler);
-
-	config_interface();
-	kickoff_adverts();
-	main_loop();
+	setup_ifaces(sock, ifaces);
+	main_loop(sock, ifaces, conf_path);
 	flog(LOG_INFO, "sending stop adverts");
-	stop_adverts();
+	stop_adverts(sock, ifaces);
+
 	if (daemonize) {
-		flog(LOG_INFO, "removing %s", pidfile);
-		unlink(pidfile);
+		flog(LOG_INFO, "removing %s", daemon_pid_file_ident);
+		daemon_pid_file_remove();
+	} else if (force_pid_file) {
+		flog(LOG_INFO, "removing %s", radvd_get_pidfile());
+		daemon_pid_file_remove();
 	}
 
+	flog(LOG_INFO, "returning from radvd main");
+	log_close();
 	return 0;
 }
 
-const char *get_pidfile(void)
+/* This function is copied from dpid.c (in libdaemon) and renamed. */
+static const char *radvd_get_pidfile(void)
 {
-	return pidfile;
+	static char *fn = NULL;
+	if (fn)
+		free(fn);
+	fn = strdupf("%s", daemon_pid_file_ident ? daemon_pid_file_ident : "unknown");
+
+	return fn;
 }
 
-void main_loop(void)
+static void main_loop(int sock, struct Interface *ifaces, char const *conf_path)
 {
 	struct pollfd fds[2];
+	sigset_t sigmask;
+	sigset_t sigempty;
+	struct sigaction sa;
+
+	sigemptyset(&sigempty);
+
+	sigemptyset(&sigmask);
+	sigaddset(&sigmask, SIGHUP);
+	sigaddset(&sigmask, SIGTERM);
+	sigaddset(&sigmask, SIGINT);
+	sigaddset(&sigmask, SIGUSR1);
+	sigprocmask(SIG_BLOCK, &sigmask, NULL);
+
+	sa.sa_handler = sighup_handler;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = 0;
+	sigaction(SIGHUP, &sa, 0);
+
+	sa.sa_handler = sigterm_handler;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = 0;
+	sigaction(SIGTERM, &sa, 0);
+
+	sa.sa_handler = sigint_handler;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = 0;
+	sigaction(SIGINT, &sa, 0);
+
+	sa.sa_handler = sigusr1_handler;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = 0;
+	sigaction(SIGUSR1, &sa, 0);
 
 	memset(fds, 0, sizeof(fds));
 
 	fds[0].fd = sock;
 	fds[0].events = POLLIN;
-	fds[0].revents = 0;
 
 #if HAVE_NETLINK
-	if (!disablenetlink) {
-		fds[1].fd = netlink_socket();
-		fds[1].events = POLLIN;
-	} else {
-		fds[1].fd = -1;
-		fds[1].events = 0;
-	}
-	fds[1].revents = 0;
+	fds[1].fd = netlink_socket();
+	fds[1].events = POLLIN;
 #else
 	fds[1].fd = -1;
-	fds[1].events = 0;
-	fds[1].revents = 0;
 #endif
 
 	for (;;) {
-		struct Interface *next = NULL;
-		struct Interface *iface;
-		int timeout = -1;
-		int rc;
+		struct timespec *tsp = 0;
 
-		if (IfaceList) {
-			timeout = next_time_msec(IfaceList);
-			next = IfaceList;
-			for (iface = IfaceList; iface; iface = iface->next) {
-				int t;
-				t = next_time_msec(iface);
-				if (timeout > t) {
-					timeout = t;
-					next = iface;
-				}
-			}
+		struct Interface *next_iface_to_expire = find_iface_by_time(ifaces);
+		if (next_iface_to_expire) {
+			static struct timespec ts;
+			int timeout = next_time_msec(next_iface_to_expire);
+			ts.tv_sec = timeout / 1000;
+			ts.tv_nsec = (timeout - 1000 * ts.tv_sec) * 1000000;
+			tsp = &ts;
+			dlog(LOG_DEBUG, 1, "polling for %g seconds. Next iface is %s.", timeout / 1000.0,
+			     next_iface_to_expire->Name);
+		} else {
+			dlog(LOG_DEBUG, 1, "No iface is next. Polling indefinitely.");
 		}
 
-		dlog(LOG_DEBUG, 5, "polling for %g seconds.", timeout / 1000.0);
-
-		rc = poll(fds, sizeof(fds) / sizeof(fds[0]), timeout);
+		int rc = ppoll(fds, sizeof(fds) / sizeof(fds[0]), tsp, &sigempty);
 
 		if (rc > 0) {
+#ifdef HAVE_NETLINK
+			if (fds[1].revents & (POLLERR | POLLHUP | POLLNVAL)) {
+				flog(LOG_WARNING, "socket error on fds[1].fd");
+			} else if (fds[1].revents & POLLIN) {
+				process_netlink_msg(fds[1].fd, ifaces);
+			}
+#endif
+
 			if (fds[0].revents & (POLLERR | POLLHUP | POLLNVAL)) {
 				flog(LOG_WARNING, "socket error on fds[0].fd");
 			} else if (fds[0].revents & POLLIN) {
@@ -411,400 +462,343 @@ void main_loop(void)
 				struct in6_pktinfo *pkt_info = NULL;
 				unsigned char msg[MSG_SIZE_RECV];
 
-				len = recv_rs_ra(msg, &rcv_addr, &pkt_info, &hoplimit);
-				if (len > 0) {
-					process(IfaceList, msg, len, &rcv_addr, pkt_info, hoplimit);
+				len = recv_rs_ra(sock, msg, &rcv_addr, &pkt_info, &hoplimit);
+				if (len > 0 && pkt_info) {
+					process(sock, ifaces, msg, len, &rcv_addr, pkt_info, hoplimit);
+				} else if (!pkt_info) {
+					dlog(LOG_INFO, 4, "recv_rs_ra returned null pkt_info.");
+				} else if (len <= 0) {
+					dlog(LOG_INFO, 4, "recv_rs_ra returned len <= 0: %d", len);
 				}
 			}
-#ifdef HAVE_NETLINK
-			if (!disablenetlink) {
-				if (fds[1].revents & (POLLERR | POLLHUP | POLLNVAL)) {
-					flog(LOG_WARNING, "socket error on fds[1].fd");
-				} else if (fds[1].revents & POLLIN) {
-					process_netlink_msg(fds[1].fd);
-				}
-			}
-#endif
 		} else if (rc == 0) {
-			if (next)
-				timer_handler(next);
+			if (next_iface_to_expire)
+				timer_handler(sock, next_iface_to_expire);
 		} else if (rc == -1) {
 			dlog(LOG_INFO, 3, "poll returned early: %s", strerror(errno));
 		}
 
-		if (sigterm_received || sigint_received) {
-			flog(LOG_WARNING, "Exiting, sigterm or sigint received.\n");
+		if (sigint_received) {
+			flog(LOG_WARNING, "Exiting, %d sigint(s) received.", sigint_received);
+			break;
+		}
+
+		if (sigterm_received) {
+			flog(LOG_WARNING, "Exiting, %d sigterm(s) received.", sigterm_received);
 			break;
 		}
 
 		if (sighup_received) {
-			dlog(LOG_INFO, 3, "sig hup received.\n");
-			reload_config();
+			dlog(LOG_INFO, 3, "sig hup received.");
+			ifaces = reload_config(sock, ifaces, conf_path);
 			sighup_received = 0;
 		}
 
 		if (sigusr1_received) {
-			dlog(LOG_INFO, 3, "sig usr1 received.\n");
-			reset_prefix_lifetimes();
+			dlog(LOG_INFO, 3, "sig usr1 received.");
+			reset_prefix_lifetimes(ifaces);
 			sigusr1_received = 0;
 		}
 
 	}
 }
 
-void timer_handler(void *data)
+static void timer_handler(int sock, struct Interface *iface)
 {
-	struct Interface *iface = (struct Interface *)data;
-	double next;
+	dlog(LOG_DEBUG, 1, "timer_handler called for %s", iface->Name);
 
-	dlog(LOG_DEBUG, 4, "timer_handler called for %s", iface->Name);
-
-	if (send_ra_forall(iface, NULL) != 0) {
+	if (send_ra_forall(sock, iface, NULL) != 0) {
 		dlog(LOG_DEBUG, 4, "send_ra_forall failed on interface %s", iface->Name);
 	}
 
-	next = rand_between(iface->MinRtrAdvInterval, iface->MaxRtrAdvInterval);
+	double next = rand_between(iface->MinRtrAdvInterval, iface->MaxRtrAdvInterval);
 
-	if (iface->init_racount < MAX_INITIAL_RTR_ADVERTISEMENTS) {
-		iface->init_racount++;
-		next = min(MAX_INITIAL_RTR_ADVERT_INTERVAL, next);
-	}
-
-	iface->next_multicast = next_timeval(next);
+	reschedule_iface(iface, next);
 }
 
-void config_interface(void)
+static void config_interface(struct Interface *iface)
 {
-	struct Interface *iface;
-	for (iface = IfaceList; iface; iface = iface->next) {
-		if (iface->AdvLinkMTU)
-			set_interface_linkmtu(iface->Name, iface->AdvLinkMTU);
-		if (iface->AdvCurHopLimit)
-			set_interface_curhlim(iface->Name, iface->AdvCurHopLimit);
-		if (iface->AdvReachableTime)
-			set_interface_reachtime(iface->Name, iface->AdvReachableTime);
-		if (iface->AdvRetransTimer)
-			set_interface_retranstimer(iface->Name, iface->AdvRetransTimer);
-	}
+	if (iface->AdvLinkMTU)
+		set_interface_linkmtu(iface->Name, iface->AdvLinkMTU);
+	if (iface->AdvCurHopLimit)
+		set_interface_curhlim(iface->Name, iface->AdvCurHopLimit);
+	if (iface->AdvReachableTime)
+		set_interface_reachtime(iface->Name, iface->AdvReachableTime);
+	if (iface->AdvRetransTimer)
+		set_interface_retranstimer(iface->Name, iface->AdvRetransTimer);
 }
 
-void kickoff_adverts(void)
+static void kickoff_adverts(int sock, struct Interface *iface)
 {
-	struct Interface *iface;
-
 	/*
 	 *      send initial advertisement and set timers
 	 */
 
-	for (iface = IfaceList; iface; iface = iface->next) {
-		double next;
+	gettimeofday(&iface->last_ra_time, NULL);
 
-		gettimeofday(&iface->last_ra_time, NULL);
+	if (iface->UnicastOnly)
+		return;
 
-		if (iface->UnicastOnly)
-			continue;
+	gettimeofday(&iface->last_multicast, NULL);
 
-		gettimeofday(&iface->last_multicast, NULL);
+	/* send an initial advertisement */
+	if (send_ra_forall(sock, iface, NULL) == 0) {
+		dlog(LOG_DEBUG, 4, "send_ra_forall failed on interface %s", iface->Name);
+	}
 
-		/* TODO: AdvSendAdvert is being checked in send_ra now so it can be removed here. */
-		if (!iface->AdvSendAdvert)
-			continue;
+	double next = min(MAX_INITIAL_RTR_ADVERT_INTERVAL, iface->MaxRtrAdvInterval);
+	reschedule_iface(iface, next);
+}
 
-		/* send an initial advertisement */
-		if (send_ra_forall(iface, NULL) == 0) {
-
-			iface->init_racount++;
-
-			next = min(MAX_INITIAL_RTR_ADVERT_INTERVAL, iface->MaxRtrAdvInterval);
-			iface->next_multicast = next_timeval(next);
-		}
+static void stop_advert_foo(struct Interface *iface, void *data)
+{
+	if (!iface->UnicastOnly) {
+		/* send a final advertisement with zero Router Lifetime */
+		dlog(LOG_DEBUG, 4, "stopping all adverts on %s.", iface->Name);
+		iface->cease_adv = 1;
+		int sock = *(int *)data;
+		send_ra_forall(sock, iface, NULL);
 	}
 }
 
-void stop_adverts(void)
+static void stop_adverts(int sock, struct Interface *ifaces)
 {
-	struct Interface *iface;
-
 	/*
 	 *      send final RA (a SHOULD in RFC4861 section 6.2.5)
 	 */
-
-	for (iface = IfaceList; iface; iface = iface->next) {
-		if (!iface->UnicastOnly) {
-			/* TODO: AdvSendAdvert is being checked in send_ra now so it can be removed here. */
-			if (iface->AdvSendAdvert) {
-				/* send a final advertisement with zero Router Lifetime */
-				iface->cease_adv = 1;
-				send_ra_forall(iface, NULL);
-			}
-		}
-	}
+	for_each_iface(ifaces, stop_advert_foo, &sock);
 }
 
-void reload_config(void)
+int setup_iface(int sock, struct Interface *iface)
 {
-	struct Interface *iface;
+	iface->ready = 0;
+
+	/* Check IFF_UP, IFF_RUNNING and IFF_MULTICAST */
+	if (check_device(sock, iface) < 0) {
+		return -1;
+	}
+
+	if (update_device_index(iface) < 0) {
+		return -1;
+	}
+
+	/* Set iface->if_index, iface->max_mtu and iface hardware address */
+	if (update_device_info(sock, iface) < 0) {
+		return -1;
+	}
+
+	/* Make sure the settings in the config file for this interface are ok (this depends
+	 * on iface->max_mtu already being set). */
+	if (check_iface(iface) < 0) {
+		return -1;
+	}
+
+	/* Make sure this is diabled.  We don't want this interface to autoconfig using its
+	 * own advert messages. */
+	if (disable_ipv6_autoconfig(iface->Name)) {
+		return -1;
+	}
+
+	/* Save the first link local address seen on the specified interface to iface->if_addr */
+	if (setup_linklocal_addr(iface) < 0) {
+		return -1;
+	}
+
+	/* join the allrouters multicast group so we get the solicitations */
+	if (setup_allrouters_membership(sock, iface) < 0) {
+		return -1;
+	}
+
+	iface->ready = 1;
+
+	dlog(LOG_DEBUG, 4, "interface definition for %s is ok", iface->Name);
+
+	return 0;
+}
+
+static void setup_iface_foo(struct Interface *iface, void *data)
+{
+	int sock = *(int *)data;
+
+	if (setup_iface(sock, iface) < 0) {
+		if (iface->IgnoreIfMissing) {
+			dlog(LOG_DEBUG, 4, "interface %s does not exist or is not set up properly, ignoring the interface",
+			     iface->Name);
+		} else {
+			flog(LOG_ERR, "interface %s does not exist or is not set up properly", iface->Name);
+			exit(1);
+		}
+	}
+
+	config_interface(iface);
+	kickoff_adverts(sock, iface);
+}
+
+static void setup_ifaces(int sock, struct Interface *ifaces)
+{
+	for_each_iface(ifaces, setup_iface_foo, &sock);
+}
+
+static struct Interface *reload_config(int sock, struct Interface *ifaces, char const *conf_path)
+{
+	free_ifaces(ifaces);
 
 	flog(LOG_INFO, "attempting to reread config file");
 
-	iface = IfaceList;
-	while (iface) {
-		struct Interface *next_iface = iface->next;
-		struct AdvPrefix *prefix;
-		struct AdvRoute *route;
-		struct AdvRDNSS *rdnss;
-		struct AdvDNSSL *dnssl;
-
-		dlog(LOG_DEBUG, 4, "freeing interface %s", iface->Name);
-
-		prefix = iface->AdvPrefixList;
-		while (prefix) {
-			struct AdvPrefix *next_prefix = prefix->next;
-
-			free(prefix);
-			prefix = next_prefix;
-		}
-
-		route = iface->AdvRouteList;
-		while (route) {
-			struct AdvRoute *next_route = route->next;
-
-			free(route);
-			route = next_route;
-		}
-
-		rdnss = iface->AdvRDNSSList;
-		while (rdnss) {
-			struct AdvRDNSS *next_rdnss = rdnss->next;
-
-			free(rdnss);
-			rdnss = next_rdnss;
-		}
-
-		dnssl = iface->AdvDNSSLList;
-		while (dnssl) {
-			struct AdvDNSSL *next_dnssl = dnssl->next;
-			int i;
-
-			for (i = 0; i < dnssl->AdvDNSSLNumber; i++)
-				free(dnssl->AdvDNSSLSuffixes[i]);
-			free(dnssl->AdvDNSSLSuffixes);
-			free(dnssl);
-
-			dnssl = next_dnssl;
-		}
-
-		free(iface);
-		iface = next_iface;
-	}
-
-	IfaceList = NULL;
-
 	/* reread config file */
-	if (readin_config(conf_file) < 0) {
-		perror("readin_config failed.");
+	ifaces = readin_config(conf_path);
+	if (!ifaces) {
+		flog(LOG_ERR, "Exiting, failed to read config file.");
 		exit(1);
 	}
-
-	/* XXX: fails due to lack of permissions with non-root user */
-	config_interface();
-	kickoff_adverts();
+	setup_ifaces(sock, ifaces);
 
 	flog(LOG_INFO, "resuming normal operation");
+
+	return ifaces;
 }
 
-void sighup_handler(int sig)
+static void sighup_handler(int sig)
 {
-	/* Linux has "one-shot" signals, reinstall the signal handler */
-	signal(SIGHUP, sighup_handler);
-
 	sighup_received = 1;
 }
 
-void sigterm_handler(int sig)
+static void sigterm_handler(int sig)
 {
-	/* Linux has "one-shot" signals, reinstall the signal handler */
-	signal(SIGTERM, sigterm_handler);
-
 	++sigterm_received;
 
-	if (sigterm_received > 1) {
+	if (sigterm_received > 2) {
 		abort();
 	}
 }
 
-void sigint_handler(int sig)
+static void sigint_handler(int sig)
 {
-	/* Linux has "one-shot" signals, reinstall the signal handler */
-	signal(SIGINT, sigint_handler);
-
 	++sigint_received;
 
-	if (sigint_received > 1) {
+	if (sigint_received > 2) {
 		abort();
 	}
 }
 
-void sigusr1_handler(int sig)
+static void sigusr1_handler(int sig)
 {
-	/* Linux has "one-shot" signals, reinstall the signal handler */
-	signal(SIGUSR1, sigusr1_handler);
-
 	sigusr1_received = 1;
 }
 
-void reset_prefix_lifetimes(void)
+static void reset_prefix_lifetimes_foo(struct Interface *iface, void *data)
 {
-	struct Interface *iface;
-	struct AdvPrefix *prefix;
-	char pfx_str[INET6_ADDRSTRLEN];
+	flog(LOG_INFO, "Resetting prefix lifetimes on %s", iface->Name);
 
-	flog(LOG_INFO, "Resetting prefix lifetimes");
-
-	for (iface = IfaceList; iface; iface = iface->next) {
-		for (prefix = iface->AdvPrefixList; prefix; prefix = prefix->next) {
-			if (prefix->DecrementLifetimesFlag) {
-				print_addr(&prefix->Prefix, pfx_str);
-				dlog(LOG_DEBUG, 4, "%s/%u%%%s plft reset from %u to %u secs", pfx_str, prefix->PrefixLen, iface->Name, prefix->curr_preferredlft,
-				     prefix->AdvPreferredLifetime);
-				dlog(LOG_DEBUG, 4, "%s/%u%%%s vlft reset from %u to %u secs", pfx_str, prefix->PrefixLen, iface->Name, prefix->curr_validlft,
-				     prefix->AdvValidLifetime);
-				prefix->curr_validlft = prefix->AdvValidLifetime;
-				prefix->curr_preferredlft = prefix->AdvPreferredLifetime;
-			}
+	for (struct AdvPrefix * prefix = iface->AdvPrefixList; prefix; prefix = prefix->next) {
+		if (prefix->DecrementLifetimesFlag) {
+			char pfx_str[INET6_ADDRSTRLEN];
+			addrtostr(&prefix->Prefix, pfx_str, sizeof(pfx_str));
+			dlog(LOG_DEBUG, 4, "%s/%u%%%s plft reset from %u to %u secs", pfx_str, prefix->PrefixLen,
+			     iface->Name, prefix->curr_preferredlft, prefix->AdvPreferredLifetime);
+			dlog(LOG_DEBUG, 4, "%s/%u%%%s vlft reset from %u to %u secs", pfx_str, prefix->PrefixLen,
+			     iface->Name, prefix->curr_validlft, prefix->AdvValidLifetime);
+			prefix->curr_validlft = prefix->AdvValidLifetime;
+			prefix->curr_preferredlft = prefix->AdvPreferredLifetime;
 		}
-
 	}
-
 }
 
-int drop_root_privileges(const char *username)
+static void reset_prefix_lifetimes(struct Interface *ifaces)
 {
-	struct passwd *pw = NULL;
-	pw = getpwnam(username);
+	for_each_iface(ifaces, reset_prefix_lifetimes_foo, 0);
+}
+
+static int drop_root_privileges(const char *username)
+{
+	struct passwd *pw = getpwnam(username);
 	if (pw) {
 		if (initgroups(username, pw->pw_gid) != 0 || setgid(pw->pw_gid) != 0 || setuid(pw->pw_uid) != 0) {
 			flog(LOG_ERR, "Couldn't change to '%.32s' uid=%d gid=%d", username, pw->pw_uid, pw->pw_gid);
-			return (-1);
+			return -1;
 		}
 	} else {
 		flog(LOG_ERR, "Couldn't find user '%.32s'", username);
-		return (-1);
+		return -1;
 	}
 	return 0;
 }
 
-int check_conffile_perm(const char *username, const char *conf_file)
+static int check_conffile_perm(const char *username, const char *conf_file)
 {
-	struct stat stbuf;
-	struct passwd *pw = NULL;
 	FILE *fp = fopen(conf_file, "r");
-
 	if (fp == NULL) {
 		flog(LOG_ERR, "can't open %s: %s", conf_file, strerror(errno));
-		return (-1);
+		return -1;
 	}
 	fclose(fp);
 
 	if (!username)
 		username = "root";
 
-	pw = getpwnam(username);
+	struct passwd *pw = getpwnam(username);
+	if (!pw) {
+		return -1;
+	}
 
-	if (stat(conf_file, &stbuf) || pw == NULL)
-		return (-1);
+	struct stat stbuf;
+	if (0 != stat(conf_file, &stbuf)) {
+		return -1;
+	}
 
 	if (stbuf.st_mode & S_IWOTH) {
 		flog(LOG_ERR, "Insecure file permissions (writable by others): %s", conf_file);
-		return (-1);
+		return -1;
 	}
 
 	/* for non-root: must not be writable by self/own group */
-	if (strncmp(username, "root", 5) != 0 && ((stbuf.st_mode & S_IWGRP && pw->pw_gid == stbuf.st_gid) || (stbuf.st_mode & S_IWUSR && pw->pw_uid == stbuf.st_uid))) {
+	if (strncmp(username, "root", 5) != 0 && ((stbuf.st_mode & S_IWGRP && pw->pw_gid == stbuf.st_gid)
+						  || (stbuf.st_mode & S_IWUSR && pw->pw_uid == stbuf.st_uid))) {
 		flog(LOG_ERR, "Insecure file permissions (writable by self/group): %s", conf_file);
-		return (-1);
+		return -1;
 	}
 
 	return 0;
 }
 
-int check_ip6_forwarding(void)
+static int check_confpath_perm(const char *username, const char *conf_path)
 {
-#ifdef HAVE_SYS_SYSCTL_H
-	int forw_sysctl[] = { SYSCTL_IP6_FORWARDING };
-#endif
-	int value;
-	size_t size = sizeof(value);
-	FILE *fp = NULL;
-	static int warned = 0;
-
-#ifdef __linux__
-	fp = fopen(PROC_SYS_IP6_FORWARDING, "r");
-	if (fp) {
-		int rc = fscanf(fp, "%d", &value);
-		if (rc != 1) {
-			flog(LOG_ERR, "cannot read value from %s: %s", PROC_SYS_IP6_FORWARDING, strerror(errno));
-			exit(1);
+	int fails = 0;
+	DIR * dir = opendir(conf_path);
+	if (dir) {
+		struct dirent *dirent = readdir(dir);
+		while (dirent) {
+			if (DT_LNK == dirent->d_type || DT_REG == dirent->d_type) {
+				char * conf_file_path = strdupf("%s/%s", conf_path, dirent->d_name);
+				int failed = check_conffile_perm(username, conf_file_path);
+				free(conf_file_path);
+				if (0 == failed) {
+					dlog(LOG_DEBUG, 5, "Permissions on %s ok", conf_path);
+				} else {
+					++fails;
+				}
+			}
+			dirent = readdir(dir);
 		}
-		fclose(fp);
-	} else {
-		flog(LOG_DEBUG, "Correct IPv6 forwarding procfs entry not found, " "perhaps the procfs is disabled, " "or the kernel interface has changed?");
-		value = -1;
+		closedir(dir);
 	}
-#endif				/* __linux__ */
+	else {
+		dlog(LOG_DEBUG, 1, "Unable to open config path, %s: %s", conf_path, strerror(errno));
+	}
 
-#ifdef HAVE_SYS_SYSCTL_H
-	if (!fp && sysctl(forw_sysctl, sizeof(forw_sysctl) / sizeof(forw_sysctl[0]), &value, &size, NULL, 0) < 0) {
-		flog(LOG_DEBUG, "Correct IPv6 forwarding sysctl branch not found, " "perhaps the kernel interface has changed?");
-		return (0);	/* this is of advisory value only */
-	}
-#endif
 
-#ifdef __linux__
-	/* Linux allows the forwarding value to be either 1 or 2.
-	 * https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/tree/Documentation/networking/ip-sysctl.txt?id=ae8abfa00efb8ec550f772cbd1e1854977d06212#n1078
-	 *
-	 * The value 2 indicates forwarding is enabled and that *AS* *WELL* router solicitions are being done.
-	 *
-	 * Which is sometimes used on routers performing RS on their WAN (ppp, etc.) links
-	 */
-	if (!warned && value != 1 && value != 2) {
-		warned = 1;
-		flog(LOG_DEBUG, "IPv6 forwarding setting is: %u, should be 1 or 2", value);
-		return (-1);
+	if (0 == fails) {
+		dlog(LOG_DEBUG, 4, "config file permissions ok");
 	}
-#else
-	if (!warned && value != 1) {
-		warned = 1;
-		flog(LOG_DEBUG, "IPv6 forwarding setting is: %u, should be 1", value);
-		return (-1);
-	}
-#endif				/* __linux__ */
 
-	return (0);
+	return fails;
 }
 
-int readin_config(char *fname)
-{
-	if ((yyin = fopen(fname, "r")) == NULL) {
-		flog(LOG_ERR, "can't open %s: %s", fname, strerror(errno));
-		return (-1);
-	}
-
-	if (yyparse() != 0) {
-		flog(LOG_ERR, "error parsing or activating the config file: %s", fname);
-		return (-1);
-	}
-
-	fclose(yyin);
-	return 0;
-}
-
-void version(void)
+static void version(void)
 {
 	fprintf(stderr, "Version: %s\n\n", VERSION);
 	fprintf(stderr, "Compiled in settings:\n");
-	fprintf(stderr, "  default config file		\"%s\"\n", PATH_RADVD_CONF);
+	fprintf(stderr, "  default config path		\"%s\"\n", PATH_RADVD_CONF);
 	fprintf(stderr, "  default pidfile		\"%s\"\n", PATH_RADVD_PID);
 	fprintf(stderr, "  default logfile		\"%s\"\n", PATH_RADVD_LOG);
 	fprintf(stderr, "  default syslog facility	%d\n", LOG_FACILITY);
@@ -813,7 +807,7 @@ void version(void)
 	exit(1);
 }
 
-void usage(void)
+static void usage(char const *pname)
 {
 	fprintf(stderr, "usage: %s %s\n", pname, usage_str);
 	exit(1);
