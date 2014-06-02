@@ -128,7 +128,7 @@ int update_device_info(struct Interface *iface)
 
 int setup_allrouters_membership(struct Interface *iface)
 {
-	return (0);
+	return 0;
 }
 
 int check_allrouters_membership(struct Interface *iface)

@@ -37,7 +37,7 @@ int update_device_info(struct Interface *iface)
 
 	if (ioctl(sock, SIOCGIFMTU, &ifr) < 0) {
 		flog(LOG_ERR, "ioctl(SIOCGIFMTU) failed for %s: %s", iface->Name, strerror(errno));
-		return (-1);
+		return -1;
 	}
 
 	iface->if_maxmtu = ifr.ifr_mtu;
@@ -45,7 +45,7 @@ int update_device_info(struct Interface *iface)
 
 	if (ioctl(sock, SIOCGIFHWADDR, &ifr) < 0) {
 		flog(LOG_ERR, "ioctl(SIOCGIFHWADDR) failed for %s: %s", iface->Name, strerror(errno));
-		return (-1);
+		return -1;
 	}
 
 	dlog(LOG_DEBUG, 3, "hardware type for %s is %s", iface->Name, hwstr(ifr.ifr_hwaddr.sa_family));
@@ -135,7 +135,7 @@ int setup_allrouters_membership(struct Interface *iface)
 		/* linux-2.6.12-bk4 returns error with HUP signal but keep listening */
 		if (errno != EADDRINUSE) {
 			flog(LOG_ERR, "can't join ipv6-allrouters on %s", iface->Name);
-			return (-1);
+			return -1;
 		}
 	}
 

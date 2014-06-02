@@ -61,7 +61,7 @@ int get_v4addr(const char *ifn, unsigned int *dst)
 	int fd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (fd < 0) {
 		flog(LOG_ERR, "create socket for IPv4 ioctl failed for %s: %s", ifn, strerror(errno));
-		return (-1);
+		return -1;
 	}
 
 	struct ifreq ifr;
@@ -73,7 +73,7 @@ int get_v4addr(const char *ifn, unsigned int *dst)
 	if (ioctl(fd, SIOCGIFADDR, &ifr) < 0) {
 		flog(LOG_ERR, "ioctl(SIOCGIFADDR) failed for %s: %s", ifn, strerror(errno));
 		close(fd);
-		return (-1);
+		return -1;
 	}
 
 	struct sockaddr_in *addr = (struct sockaddr_in *)(&ifr.ifr_addr);
