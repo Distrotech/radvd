@@ -12,25 +12,19 @@
  *   may request it from <reubenhwk@gmail.com>.
  *
  */
+
+%defines
+%locations
+
 %{
 #include "config.h"
 #include "includes.h"
 #include "radvd.h"
 #include "defaults.h"
 
-extern struct Interface *IfaceList;
-struct Interface *iface = NULL;
-struct AdvPrefix *prefix = NULL;
-struct AdvRoute *route = NULL;
-struct AdvRDNSS *rdnss = NULL;
-struct AdvDNSSL *dnssl = NULL;
-struct AdvLowpanCo *lowpanco = NULL;
-struct AdvAbro  *abro = NULL;
-
-extern char *conf_file;
-extern int num_lines;
-extern char *yytext;
-
+#include <sys/types.h>
+#include <dirent.h>
+#include <errno.h>
 #define YYERROR_VERBOSE 1
 static int countbits(int b);
 static int count_mask(struct sockaddr_in6 *m);
@@ -56,7 +50,6 @@ static struct in6_addr get_prefix6(struct in6_addr const *addr, struct in6_addr 
 			current->next = value; \
 		} \
 	} while (0)
-
 
 %}
 
@@ -163,63 +156,59 @@ static struct in6_addr get_prefix6(struct in6_addr const *addr, struct in6_addr 
 	struct AdvAbro		*abroinfo;
 };
 
+%{
+#include "scanner.h"
+extern int yycolumn;
+extern int yylineno;
+static char const * filename;
+static struct Interface *iface;
+static struct Interface *IfaceList;
+static struct AdvPrefix *prefix;
+static struct AdvRoute *route;
+static struct AdvRDNSS *rdnss;
+static struct AdvDNSSL *dnssl;
+static struct AdvLowpanCo *lowpanco;
+static struct AdvAbro  *abro;
 static void cleanup(void);
 #define ABORT	do { cleanup(); YYABORT; } while (0);
 static void yyerror(char const * msg);
+%}
+
 %%
 
-grammar		: grammar ifacedef
+
+grammar		: grammar1
+		| grammar2
+		;
+
+grammar1	: grammar1 ifacedef
 		| ifacedef
 		;
 
 ifacedef	: ifacehead '{' ifaceparams  '}' ';'
 		{
-			struct Interface *iface2;
-
-			iface2 = IfaceList;
-			while (iface2)
-			{
-				if (!strcmp(iface2->Name, iface->Name))
-				{
-					flog(LOG_ERR, "duplicate interface "
-						"definition for %s", iface->Name);
-					ABORT;
-				}
-				iface2 = iface2->next;
-			}
-
-			if (check_device(iface) < 0) {
-				if (iface->IgnoreIfMissing) {
-					dlog(LOG_DEBUG, 4, "interface %s did not exist, ignoring the interface", iface->Name);
-				}
-				else {
-					flog(LOG_ERR, "interface %s does not exist", iface->Name);
-					ABORT;
-				}
-			}
-			if (update_device_info(iface) < 0)
-				if (!iface->IgnoreIfMissing)
-				ABORT;
-			if (check_iface(iface) < 0)
-				if (!iface->IgnoreIfMissing)
-				ABORT;
-			if (setup_linklocal_addr(iface) < 0)
-				if (!iface->IgnoreIfMissing)
-				ABORT;
-			if (setup_allrouters_membership(iface) < 0)
-				if (!iface->IgnoreIfMissing)
-				ABORT;
-
 			dlog(LOG_DEBUG, 4, "interface definition for %s is ok", iface->Name);
 
 			iface->next = IfaceList;
 			IfaceList = iface;
-
-			iface = NULL;
+			iface = 0;
 		};
 
 ifacehead	: T_INTERFACE name
 		{
+			iface = IfaceList;
+
+			while (iface)
+			{
+				if (!strcmp($2, iface->Name))
+				{
+					flog(LOG_ERR, "duplicate interface "
+						"definition for %s", $2);
+					ABORT;
+				}
+				iface = iface->next;
+			}
+
 			iface = malloc(sizeof(struct Interface));
 
 			if (iface == NULL) {
@@ -230,7 +219,11 @@ ifacehead	: T_INTERFACE name
 			iface_init_defaults(iface);
 			strncpy(iface->Name, $2, IFNAMSIZ-1);
 			iface->Name[IFNAMSIZ-1] = '\0';
+			iface->lineno = @1.first_line;
 		}
+		;
+
+grammar2	: ifaceparams
 		;
 
 name		: STRING
@@ -240,9 +233,8 @@ name		: STRING
 		}
 		;
 
-ifaceparams :
-		/* empty */
-		| ifaceparam ifaceparams
+ifaceparams 	: ifaceparams ifaceparam /* This is left recursion and won't overrun the stack. */
+		| /* empty */
 		;
 
 ifaceparam 	: ifaceval
@@ -363,7 +355,7 @@ v6addrlist	: IPV6ADDR ';'
 		{
 			struct Clients *new = calloc(1, sizeof(struct Clients));
 			if (new == NULL) {
-				flog(LOG_CRIT, "calloc failed: %s", strerror(errno));
+				flog(LOG_CRIT, "Error: (%s:%d) calloc failed: %s", filename, @1.first_line, strerror(errno));
 				ABORT;
 			}
 
@@ -374,7 +366,7 @@ v6addrlist	: IPV6ADDR ';'
 		{
 			struct Clients *new = calloc(1, sizeof(struct Clients));
 			if (new == NULL) {
-				flog(LOG_CRIT, "calloc failed: %s", strerror(errno));
+				flog(LOG_CRIT, "Error: (%s:%d) calloc failed: %s", filename, @1.first_line, strerror(errno));
 				ABORT;
 			}
 
@@ -392,14 +384,14 @@ prefixdef	: prefixhead optional_prefixplist ';'
 
 				if (prefix->AdvPreferredLifetime > prefix->AdvValidLifetime)
 				{
-					flog(LOG_ERR, "AdvValidLifeTime must be "
-						"greater than AdvPreferredLifetime in %s, line %d",
-						conf_file, num_lines);
+					flog(LOG_ERR, "Error: (%s:%d) AdvValidLifeTime must be "
+						"greater than AdvPreferredLifetime.",
+						filename, @1.first_line);
 					ABORT;
 				}
 
 				if ( prefix->if6[0] && prefix->if6to4[0]) {
-					flog(LOG_ERR, "Base6Interface and Base6to4Interface are mutually exclusive at this time.");
+					flog(LOG_ERR, "Error: (%s:%d) Base6Interface and Base6to4Interface are mutually exclusive at this time.", filename, @1.first_line);
 					ABORT;
 				}
 
@@ -407,7 +399,7 @@ prefixdef	: prefixhead optional_prefixplist ';'
 				{
 					if (get_v4addr(prefix->if6to4, &dst) < 0)
 					{
-						flog(LOG_ERR, "interface %s has no IPv4 addresses, disabling 6to4 prefix", prefix->if6to4 );
+						flog(LOG_ERR, "Error: (%s:%d) interface %s has no IPv4 addresses, disabling 6to4 prefix", filename, @1.first_line, prefix->if6to4);
 						prefix->enabled = 0;
 					}
 					else
@@ -420,19 +412,19 @@ prefixdef	: prefixhead optional_prefixplist ';'
 				if ( prefix->if6[0] )
 				{
 #ifndef HAVE_IFADDRS_H
-					flog(LOG_ERR, "Base6Interface not supported in %s, line %d", conf_file, num_lines);
+					flog(LOG_ERR, "Error: (%s:%d) Base6Interface not supported in %s, line %d", filename, @1.first_line, filename, @1.first_line);
 					ABORT;
 #else
 					struct ifaddrs *ifap = 0, *ifa = 0;
 					struct AdvPrefix *next = prefix->next;
 
 					if (prefix->PrefixLen != 64) {
-						flog(LOG_ERR, "Only /64 is allowed with Base6Interface.  %s:%d", conf_file, num_lines);
+						flog(LOG_ERR, "Error: (%s:%d) Only /64 is allowed with Base6Interface.", filename, @1.first_line);
 						ABORT;
 					}
 
 					if (getifaddrs(&ifap) != 0)
-						flog(LOG_ERR, "getifaddrs failed: %s", strerror(errno));
+						flog(LOG_ERR, "Error: (%s:%d) getifaddrs failed: %s", filename, @1.first_line, strerror(errno));
 
 					for (ifa = ifap; ifa; ifa = ifa->ifa_next) {
 						struct sockaddr_in6 *s6 = 0;
@@ -463,10 +455,10 @@ prefixdef	: prefixhead optional_prefixplist ';'
 						prefix->next = next;
 
 						if (inet_ntop(ifa->ifa_addr->sa_family, (void *)&(prefix->Prefix), buf, sizeof(buf)) == NULL)
-							flog(LOG_ERR, "%s: inet_ntop failed in %s, line %d!", ifa->ifa_name, conf_file, num_lines);
+							flog(LOG_ERR, "Error: (%s:%d) %s: inet_ntop failed!", filename, @1.first_line, ifa->ifa_name);
 						else
-							dlog(LOG_DEBUG, 3, "auto-selected prefix %s/%d on interface %s from interface %s",
-								buf, prefix->PrefixLen, iface->Name, ifa->ifa_name);
+							dlog(LOG_DEBUG, 3, "Info: (%s:%d) auto-selected prefix %s/%d on interface %s from interface %s",
+								filename, @1.first_line, buf, prefix->PrefixLen, iface->Name, ifa->ifa_name);
 
 						/* Taking only one prefix from the Base6Interface.  Taking more than one would require allocating new
 						   prefixes and building a list.  I'm not sure how to do that from here. So for now, break. */
@@ -490,7 +482,7 @@ prefixhead	: T_PREFIX IPV6ADDR '/' NUMBER
 
 			if (!memcmp($2, &zeroaddr, sizeof(struct in6_addr))) {
 #ifndef HAVE_IFADDRS_H
-				flog(LOG_ERR, "invalid all-zeros prefix in %s, line %d", conf_file, num_lines);
+				flog(LOG_ERR, "Error: (%s:%d) invalid all-zeros prefix.", filename, @1.first_line);
 				ABORT;
 #else
 				struct ifaddrs *ifap = 0, *ifa = 0;
@@ -498,17 +490,17 @@ prefixhead	: T_PREFIX IPV6ADDR '/' NUMBER
 
 				while (next) {
 					if (next->AutoSelected) {
-						flog(LOG_ERR, "auto selecting prefixes works only once per interface.  See %s, line %d", conf_file, num_lines);
+						flog(LOG_ERR, "Error: (%s:%d) auto selecting prefixes works only once per interface.", filename, @1.first_line);
 						ABORT;
 					}
 					next = next->next;
 				}
 				next = 0;
 
-				dlog(LOG_DEBUG, 5, "all-zeros prefix in %s, line %d, parsing..", conf_file, num_lines);
+				dlog(LOG_DEBUG, 5, "Info: (%s:%d) all-zeros prefix.", filename, @1.first_line);
 
 				if (getifaddrs(&ifap) != 0)
-					flog(LOG_ERR, "getifaddrs failed: %s", strerror(errno));
+					flog(LOG_ERR, "Error: (%s:%d) getifaddrs failed: %s", filename, @1.first_line, strerror(errno));
 
 				for (ifa = ifap; ifa; ifa = ifa->ifa_next) {
 					struct sockaddr_in6 *s6 = (struct sockaddr_in6 *)ifa->ifa_addr;
@@ -529,7 +521,7 @@ prefixhead	: T_PREFIX IPV6ADDR '/' NUMBER
 					prefix = malloc(sizeof(struct AdvPrefix));
 
 					if (prefix == NULL) {
-						flog(LOG_CRIT, "malloc failed: %s", strerror(errno));
+						flog(LOG_CRIT, "Error: (%s:%d) malloc failed: %s", filename, @1.first_line, strerror(errno));
 						ABORT;
 					}
 
@@ -544,13 +536,13 @@ prefixhead	: T_PREFIX IPV6ADDR '/' NUMBER
 						prefix->PrefixLen = count_mask(mask);
 
 					if (inet_ntop(ifa->ifa_addr->sa_family, (void *)&(prefix->Prefix), buf, sizeof(buf)) == NULL)
-						flog(LOG_ERR, "%s: inet_ntop failed in %s, line %d!", ifa->ifa_name, conf_file, num_lines);
+						flog(LOG_ERR, "Error: (%s:%d) inet_ntop failed on interface %s!", filename, @1.first_line, ifa->ifa_name);
 					else
-						dlog(LOG_DEBUG, 3, "auto-selected prefix %s/%d on interface %s", buf, prefix->PrefixLen, ifa->ifa_name);
+						dlog(LOG_DEBUG, 3, "Info: (%s:%d) auto-selected prefix %s/%d on interface %s", filename, @1.first_line, buf, prefix->PrefixLen, ifa->ifa_name);
 				}
 
 				if (!prefix) {
-					flog(LOG_WARNING, "no auto-selected prefix on interface %s, disabling advertisements",  iface->Name);
+					flog(LOG_WARNING, "Warning: (%s:%d) no auto-selected prefix on interface %s, disabling advertisements", filename, @1.first_line, iface->Name);
 				}
 
 				if (ifap)
@@ -561,7 +553,7 @@ prefixhead	: T_PREFIX IPV6ADDR '/' NUMBER
 				prefix = malloc(sizeof(struct AdvPrefix));
 
 				if (prefix == NULL) {
-					flog(LOG_CRIT, "malloc failed: %s", strerror(errno));
+					flog(LOG_CRIT, "Error: (%s:%d) malloc failed: %s", filename, @1.first_line, strerror(errno));
 					ABORT;
 				}
 
@@ -569,7 +561,7 @@ prefixhead	: T_PREFIX IPV6ADDR '/' NUMBER
 
 				if ($4 > MAX_PrefixLen)
 				{
-					flog(LOG_ERR, "invalid prefix length in %s, line %d", conf_file, num_lines);
+					flog(LOG_ERR, "Error: (%s:%d) invalid prefix length.", filename, @1.first_line);
 					ABORT;
 				}
 
@@ -621,7 +613,7 @@ prefixparms	: T_AdvOnLink SWITCH ';'
 		{
 			if (prefix) {
 				if (prefix->AutoSelected && $2 == 0)
-					flog(LOG_WARNING, "prefix automatically selected, AdvRouterAddr always enabled, ignoring config line %d", num_lines);
+					flog(LOG_WARNING, "Warning: (%s:%d) prefix automatically selected, AdvRouterAddr always enabled, ignoring.", filename, @1.first_line);
 				else
 					prefix->AdvRouterAddr = $2;
 			}
@@ -670,10 +662,10 @@ prefixparms	: T_AdvOnLink SWITCH ';'
 		{
 			if (prefix) {
 				if (prefix->AutoSelected) {
-					flog(LOG_ERR, "automatically selecting the prefix and Base6Interface are mutually exclusive");
+					flog(LOG_ERR, "Error: (%s:%d) automatically selecting the prefix and Base6Interface are mutually exclusive.", filename, @1.first_line);
 					ABORT;
 				} /* fallthrough */
-				dlog(LOG_DEBUG, 4, "using prefixes on interface %s for prefixes on interface %s", $2, iface->Name);
+				dlog(LOG_DEBUG, 4, "Info: (%s:%d) using prefixes on interface %s for prefixes on interface %s.", filename, @1.first_line, $2, iface->Name);
 				strncpy(prefix->if6, $2, IFNAMSIZ-1);
 				prefix->if6[IFNAMSIZ-1] = '\0';
 			}
@@ -683,10 +675,10 @@ prefixparms	: T_AdvOnLink SWITCH ';'
 		{
 			if (prefix) {
 				if (prefix->AutoSelected) {
-					flog(LOG_ERR, "automatically selecting the prefix and Base6to4Interface are mutually exclusive");
+					flog(LOG_ERR, "Error: (%s:%d) automatically selecting the prefix and Base6to4Interface are mutually exclusive", filename, @1.first_line);
 					ABORT;
 				} /* fallthrough */
-				dlog(LOG_DEBUG, 4, "using interface %s for 6to4 prefixes on interface %s", $2, iface->Name);
+				dlog(LOG_DEBUG, 4, "Info: (%s:%d) using interface %s for 6to4 prefixes on interface %s", filename, @1.first_line, $2, iface->Name);
 				strncpy(prefix->if6to4, $2, IFNAMSIZ-1);
 				prefix->if6to4[IFNAMSIZ-1] = '\0';
 			}
@@ -706,7 +698,7 @@ routehead	: T_ROUTE IPV6ADDR '/' NUMBER
 			route = malloc(sizeof(struct AdvRoute));
 
 			if (route == NULL) {
-				flog(LOG_CRIT, "malloc failed: %s", strerror(errno));
+				flog(LOG_CRIT, "Error: (%s:%d) malloc failed: %s", filename, @1.first_line, strerror(errno));
 				ABORT;
 			}
 
@@ -714,7 +706,7 @@ routehead	: T_ROUTE IPV6ADDR '/' NUMBER
 
 			if ($4 > MAX_PrefixLen)
 			{
-				flog(LOG_ERR, "invalid route prefix length in %s, line %d", conf_file, num_lines);
+				flog(LOG_ERR, "Error: (%s:%d) invalid route prefix length.", filename, @1.first_line);
 				ABORT;
 			}
 
@@ -766,7 +758,7 @@ rdnssaddr	: IPV6ADDR
 				rdnss = malloc(sizeof(struct AdvRDNSS));
 
 				if (rdnss == NULL) {
-					flog(LOG_CRIT, "malloc failed: %s", strerror(errno));
+					flog(LOG_CRIT, "Error: (%s:%d) malloc failed: %s", filename, @1.first_line, strerror(errno));
 					ABORT;
 				}
 
@@ -787,7 +779,7 @@ rdnssaddr	: IPV6ADDR
 					rdnss->AdvRDNSSNumber++;
 					break;
 				default:
-					flog(LOG_CRIT, "Too many addresses in RDNSS section");
+					flog(LOG_CRIT, "Error: (%s:%d) Too many addresses in RDNSS section.", filename, @1.first_line);
 					ABORT;
 			}
 
@@ -797,7 +789,7 @@ rdnssaddr	: IPV6ADDR
 rdnsshead	: T_RDNSS rdnssaddrs
 		{
 			if (!rdnss) {
-				flog(LOG_CRIT, "No address specified in RDNSS section");
+				flog(LOG_CRIT, "Error: (%s:%d) No address specified in RDNSS section.", filename, @1.first_line);
 				ABORT;
 			}
 		}
@@ -814,11 +806,11 @@ rdnssplist	: rdnssplist rdnssparms
 
 rdnssparms	: T_AdvRDNSSPreference NUMBER ';'
 		{
-			flog(LOG_WARNING, "Ignoring deprecated RDNSS preference.");
+			flog(LOG_WARNING, "Warning: (%s:%d) Ignoring deprecated RDNSS preference.", filename, @1.first_line);
 		}
 		| T_AdvRDNSSOpenFlag SWITCH ';'
 		{
-			flog(LOG_WARNING, "Ignoring deprecated RDNSS open flag.");
+			flog(LOG_WARNING, "Warning: (%s:%d) Ignoring deprecated RDNSS open flag.", filename, @1.first_line);
 		}
 		| T_AdvRDNSSLifetime number_or_infinity ';'
 		{
@@ -830,6 +822,10 @@ rdnssparms	: T_AdvRDNSSPreference NUMBER ';'
 			} else {
 				rdnss->AdvRDNSSLifetime = $2;
 			}
+			if ($2 > 2*(iface->MaxRtrAdvInterval))
+				flog(LOG_WARNING, "Warning: (%s:%d) AdvRDNSSLifetime <= 2*MaxRtrAdvInterval would allow stale DNS servers to be deleted faster", filename, @1.first_line);
+
+			rdnss->AdvRDNSSLifetime = $2;
 		}
 		| T_FlushRDNSS SWITCH ';'
 		{
@@ -861,7 +857,7 @@ dnsslsuffix	: STRING
 				if (*ch == '-' || *ch == '.')
 					continue;
 
-				flog(LOG_CRIT, "Invalid domain suffix specified");
+				flog(LOG_CRIT, "Error: (%s:%d) Invalid domain suffix specified.", filename, @1.first_line);
 				ABORT;
 			}
 
@@ -870,7 +866,7 @@ dnsslsuffix	: STRING
 				dnssl = malloc(sizeof(struct AdvDNSSL));
 
 				if (dnssl == NULL) {
-					flog(LOG_CRIT, "malloc failed: %s", strerror(errno));
+					flog(LOG_CRIT, "Error: (%s:%d) malloc failed: %s", filename, @1.first_line, strerror(errno));
 					ABORT;
 				}
 
@@ -882,7 +878,7 @@ dnsslsuffix	: STRING
 				realloc(dnssl->AdvDNSSLSuffixes,
 					dnssl->AdvDNSSLNumber * sizeof(char*));
 			if (dnssl->AdvDNSSLSuffixes == NULL) {
-				flog(LOG_CRIT, "realloc failed: %s", strerror(errno));
+				flog(LOG_CRIT, "Error: (%s:%d) realloc failed: %s", filename, @1.first_line, strerror(errno));
 				ABORT;
 			}
 
@@ -893,7 +889,7 @@ dnsslsuffix	: STRING
 dnsslhead	: T_DNSSL dnsslsuffixes
 		{
 			if (!dnssl) {
-				flog(LOG_CRIT, "No domain specified in DNSSL section");
+				flog(LOG_CRIT, "Error: (%s:%d) No domain specified in DNSSL section", filename, @1.first_line);
 				ABORT;
 			}
 		}
@@ -911,9 +907,9 @@ dnsslplist	: dnsslplist dnsslparms
 dnsslparms	: T_AdvDNSSLLifetime number_or_infinity ';'
 		{
 			if ($2 > 2*(iface->MaxRtrAdvInterval))
-				flog(LOG_WARNING, "Warning: AdvDNSSLLifetime <= 2*MaxRtrAdvInterval would allow stale DNS suffixes to be deleted faster");
+				flog(LOG_WARNING, "Warning: (%s:%d) AdvDNSSLLifetime <= 2*MaxRtrAdvInterval would allow stale DNS suffixes to be deleted faster", filename, @1.first_line);
 			if ($2 < iface->MaxRtrAdvInterval && $2 != 0) {
-				flog(LOG_ERR, "AdvDNSSLLifetime must be at least MaxRtrAdvInterval");
+				flog(LOG_ERR, "Error: (%s:%d) AdvDNSSLLifetime must be at least MaxRtrAdvInterval.", filename, @1.first_line);
 				dnssl->AdvDNSSLLifetime = iface->MaxRtrAdvInterval;
 			} else {
 				dnssl->AdvDNSSLLifetime = $2;
@@ -938,7 +934,7 @@ lowpancohead	: T_LOWPANCO
 			lowpanco = malloc(sizeof(struct AdvLowpanCo));
 
 			if (lowpanco == NULL) {
-				flog(LOG_CRIT, "malloc failed: %s", strerror(errno));
+				flog(LOG_CRIT, "Error: (%s:%d) malloc failed: %s", filename, @1.first_line, strerror(errno));
 				ABORT;
 			}
 
@@ -983,14 +979,14 @@ abrohead	: T_ABRO IPV6ADDR '/' NUMBER
 		{
 			if ($4 > MAX_PrefixLen)
 			{
-				flog(LOG_ERR, "invalid abro prefix length in %s, line %d", conf_file, num_lines);
+				flog(LOG_ERR, "Error: (%s:%d) invalid abro prefix length %d", filename, @1.first_line, $4);
 				ABORT;
 			}
 
 			abro = malloc(sizeof(struct AdvAbro));
 
 			if (abro == NULL) {
-				flog(LOG_CRIT, "malloc failed: %s", strerror(errno));
+				flog(LOG_CRIT, "Error: (%s:%d) malloc failed: %s", filename, @1.first_line, strerror(errno));
 				ABORT;
 			}
 

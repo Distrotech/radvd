@@ -29,7 +29,7 @@ static char const *hwstr(unsigned short sa_family);
  * determines the link layer token length and checks it against
  * the defined prefixes
  */
-int update_device_info(struct Interface *iface)
+int update_device_info(int sock, struct Interface *iface)
 {
 	struct ifreq ifr;
 	memset(&ifr, 0, sizeof(ifr));
@@ -91,7 +91,6 @@ int update_device_info(struct Interface *iface)
 	}
 
 	dlog(LOG_DEBUG, 3, "link layer token length for %s is %d", iface->Name, iface->if_hwaddr_len);
-
 	dlog(LOG_DEBUG, 3, "prefix length for %s is %d", iface->Name, iface->if_prefix_len);
 
 	if (iface->if_hwaddr_len != -1) {
@@ -118,12 +117,12 @@ int update_device_info(struct Interface *iface)
 		prefix = prefix->next;
 	}
 
+	return 0;
 }
 
-int setup_allrouters_membership(struct Interface *iface)
+int setup_allrouters_membership(int sock, struct Interface *iface)
 {
 	struct ipv6_mreq mreq;
-
 	memset(&mreq, 0, sizeof(mreq));
 	mreq.ipv6mr_interface = iface->if_index;
 

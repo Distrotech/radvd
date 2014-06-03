@@ -17,6 +17,17 @@
 #include "includes.h"
 #include "radvd.h"
 
+static int ensure_iface_setup(int sock, struct Interface *iface);
+static int really_send(int sock, struct in6_addr const *dest, unsigned int if_index, struct in6_addr if_addr, unsigned char *buff,
+		size_t len);
+static void send_ra_inc_len(size_t * len, int add);
+static void add_sllao(unsigned char *buff, size_t * len, struct Interface *iface);
+static time_t time_diff_secs(const struct timeval *time_x, const struct timeval *time_y);
+static void decrement_lifetime(const time_t secs, uint32_t * lifetime);
+static void cease_adv_pfx_msg(const char *if_name, struct in6_addr *pfx, const int pfx_len);
+static int ensure_iface_setup(int sock, struct Interface *iface);
+static int send_ra(int sock, struct Interface *iface, struct in6_addr const *dest);
+
 /*
  * Sends an advertisement for all specified clients of this interface
  * (or via broadcast, if there are no restrictions configured).
@@ -25,7 +36,7 @@
  * address only, but only if it was configured.
  *
  */
-int send_ra_forall(struct Interface *iface, struct in6_addr *dest)
+int send_ra_forall(int sock, struct Interface *iface, struct in6_addr *dest)
 {
 	struct Clients *current;
 
@@ -37,7 +48,7 @@ int send_ra_forall(struct Interface *iface, struct in6_addr *dest)
 		if (dest == NULL && iface->UnicastOnly) {
 			return 0;
 		}
-		return send_ra(iface, dest);
+		return send_ra(sock, iface, dest);
 	}
 
 	/* If clients are configured, send the advertisement to all of them via unicast */
@@ -50,7 +61,7 @@ int send_ra_forall(struct Interface *iface, struct in6_addr *dest)
 		if (dest != NULL && memcmp(dest, &current->Address, sizeof(struct in6_addr)) != 0)
 			continue;
 		dlog(LOG_DEBUG, 5, "Sending RA to %s", address_text);
-		send_ra(iface, &(current->Address));
+		send_ra(sock, iface, &(current->Address));
 
 		/* If we should only send the RA to a specific address, we are done */
 		if (dest != NULL)
@@ -79,7 +90,7 @@ static void send_ra_inc_len(size_t * len, int add)
 	}
 }
 
-local void add_sllao(unsigned char *buff, size_t * len, struct Interface *iface)
+static void add_sllao(unsigned char *buff, size_t * len, struct Interface *iface)
 {
 	/* *INDENT-OFF* */
 	/*
@@ -159,43 +170,27 @@ static void cease_adv_pfx_msg(const char *if_name, struct in6_addr *pfx, const i
 
 }
 
-int send_ra(struct Interface *iface, struct in6_addr *dest)
+static int ensure_iface_setup(int sock, struct Interface *iface)
 {
+#ifndef HAVE_NETLINK
+	setup_iface(sock, iface);
+#endif
 
+	return (iface->ready ? 0 : -1);
+}
 
-	update_device_info(iface);
+static int send_ra(int sock, struct Interface *iface, struct in6_addr const *dest)
+{
+	size_t buff_dest = 0;
 
-	/* First we need to check that the interface hasn't been removed or deactivated */
-	if (check_device(iface) < 0) {
-		if (iface->IgnoreIfMissing)	/* a bit more quiet warning message.. */
-			dlog(LOG_DEBUG, 4, "interface %s does not exist, ignoring the interface", iface->Name);
-		else {
-			flog(LOG_WARNING, "interface %s does not exist, ignoring the interface", iface->Name);
-		}
-		iface->HasFailed = 1;
-		/* not really a 'success', but we need to schedule new timers.. */
+	/* when netlink is not available (disabled or BSD), ensure_iface_setup is necessary. */
+	if (ensure_iface_setup(sock, iface) < 0) {
+		dlog(LOG_DEBUG, 3, "Not sending RA for %s, interface is not ready", iface->Name);
 		return 0;
-	} else {
-		/* check_device was successful, act if it has failed previously */
-		if (iface->HasFailed == 1) {
-			flog(LOG_WARNING, "interface %s seems to have come back up, trying to reinitialize", iface->Name);
-			iface->HasFailed = 0;
-			/*
-			 * return -1 so timer_handler() doesn't schedule new timers,
-			 * reload_config() will kick off new timers anyway.  This avoids
-			 * timer list corruption.
-			 */
-			reload_config();
-			return -1;
-		}
 	}
 
-	/* Make sure that we've joined the all-routers multicast group */
-	if (!disableigmp6check && check_allrouters_membership(iface) < 0)
-		flog(LOG_WARNING, "problem checking all-routers membership on %s", iface->Name);
-
 	if (!iface->AdvSendAdvert) {
-		dlog(LOG_DEBUG, 2, "AdvSendAdvert is off for %s", iface->Name);
+		dlog(LOG_DEBUG, 3, "AdvSendAdvert is off for %s", iface->Name);
 		return 0;
 	}
 
@@ -426,7 +421,6 @@ int send_ra(struct Interface *iface, struct in6_addr *dest)
 	/*
 	 * add Source Link-layer Address option
 	 */
-
 	if (iface->AdvSourceLLAddress && iface->if_hwaddr_len > 0) {
 		add_sllao(buff, &len, iface);
 	}
@@ -515,12 +509,14 @@ int send_ra(struct Interface *iface, struct in6_addr *dest)
 			flog(LOG_WARNING, "sendmsg: %s", strerror(errno));
 		else
 			dlog(LOG_DEBUG, 3, "sendmsg: %s", strerror(errno));
+		return -1;
 	}
 
 	return 0;
 }
 
-int really_send(struct in6_addr const *dest, unsigned int if_index, struct in6_addr if_addr, unsigned char *buff, size_t len)
+static int really_send(int sock, struct in6_addr const *dest, unsigned int if_index, struct in6_addr if_addr, unsigned char *buff,
+		size_t len)
 {
 	struct sockaddr_in6 addr;
 	memset((void *)&addr, 0, sizeof(addr));

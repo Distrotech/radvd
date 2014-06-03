@@ -36,11 +36,13 @@ struct Clients;
 
 struct Interface {
 	char Name[IFNAMSIZ];	/* interface name */
+	int lineno;
 
 	struct in6_addr if_addr;
 	unsigned int if_index;
+	unsigned int *flags;
 
-	uint8_t init_racount;	/* Initial RAs */
+	uint8_t racount;	/* Initial RAs */
 
 	uint8_t if_hwaddr[HWADDR_MAX];
 	int if_hwaddr_len;
@@ -89,8 +91,8 @@ struct Interface {
 	struct timeval last_multicast;
 	struct timeval next_multicast;
 
-	/* Info whether this interface has failed in the past (and may need to be reinitialized) */
-	int HasFailed;
+	/* Info whether this interface has been initialized successfully */
+	int ready;
 
 	struct Interface *next;
 };
@@ -231,8 +233,8 @@ struct nd_opt_6co {
 struct Interface *readin_config(char const *fname);
 
 /* radvd.c */
-void reload_config(void);
-void reset_prefix_lifetimes(void);
+int disable_ipv6_autoconfig(char const *iface);
+int setup_iface(int sock, struct Interface *iface);
 
 /* timer.c */
 struct timeval next_timeval(double next);
@@ -241,17 +243,17 @@ int next_time_msec(struct Interface const *iface);
 int expired(struct Interface const *iface);
 
 /* device.c */
-int update_device_info(struct Interface *);
-int check_device(struct Interface *);
+int update_device_index(struct Interface *iface);
+int update_device_info(int sock, struct Interface *);
+int check_device(int sock, struct Interface *);
 int setup_linklocal_addr(struct Interface *);
-int setup_allrouters_membership(struct Interface *);
-int check_allrouters_membership(struct Interface *);
+int setup_allrouters_membership(int sock, struct Interface *);
 int get_v4addr(const char *, unsigned int *);
-int set_interface_var(const char *, const char *, const char *, uint32_t);
 int set_interface_linkmtu(const char *, uint32_t);
 int set_interface_curhlim(const char *, uint8_t);
 int set_interface_reachtime(const char *, uint32_t);
 int set_interface_retranstimer(const char *, uint32_t);
+int check_ip6_forwarding(void);
 
 /* interface.c */
 void iface_init_defaults(struct Interface *);
@@ -270,15 +272,13 @@ void reschedule_iface(struct Interface *iface, double next);
 int open_icmpv6_socket(void);
 
 /* send.c */
-int send_ra(struct Interface *iface, struct in6_addr *dest);
-int send_ra_forall(struct Interface *iface, struct in6_addr *dest);
-int really_send(struct in6_addr const *dest, unsigned int if_index, struct in6_addr if_addr, unsigned char *buff, size_t len);
+int send_ra_forall(int sock, struct Interface *iface, struct in6_addr *dest);
 
 /* process.c */
-void process(struct Interface *, unsigned char *, int, struct sockaddr_in6 *, struct in6_pktinfo *, int);
+void process(int sock, struct Interface *, unsigned char *, int, struct sockaddr_in6 *, struct in6_pktinfo *, int);
 
 /* recv.c */
-int recv_rs_ra(unsigned char *, struct sockaddr_in6 *, struct in6_pktinfo **, int *);
+int recv_rs_ra(int sock, unsigned char *, struct sockaddr_in6 *, struct in6_pktinfo **, int *);
 
 /* util.c */
 char * strdupf(char const * format, ...) __attribute__ ((format(printf, 1, 2)));
